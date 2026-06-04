@@ -12,14 +12,18 @@ Faction dashboard and Discord bot for Torn factions. Tracks respect, chain perfo
 ### Dashboard
 - **Torn day** stats (12:00–11:59 **TCT**) — Torn City Time (fixed UTC/GMT, no DST)
 - **Live:** online/idle for chains, copy ping text, profile + message links
+- **Hits Today** links to a full attack log report (Mugged, Hospitalized, Lost, etc.)
+- **No hits yet** list after configurable hours (calendar day or since war start)
+- **Since war** toggle when war start time is set in Admin
 - **Perk bar:** available respect → next upgrade (from Torn `upgrades` API), or rank fallback
 - **History / Analytics / Compare / All-time**
 - **Underperformers:** median chain avg, low-respect hit count
 - **Export** analytics report to clipboard
 
 ### Discord
-- `/respect` — pick a date, full summary embed
-- `/online` — who is online for chains
+Full dashboard mirror — see **[bot/README.md](bot/README.md)** (Raspberry Pi / local `TORN_API_KEY` or remote Vercel API).
+
+Examples: `/dashboard`, `/live`, `/today`, `/hits`, `/inactive`, `/online`, `/respect`, `/compare`, `/history`, `/alltime`, `/help` (17 commands).
 
 ### Data pipeline
 - Daily GitHub Action at **12:05 TCT** (12:05 UTC — after Torn day ends)
@@ -56,7 +60,7 @@ npm run dev              # vercel dev
 npm run fetch            # fetch last completed Torn day
 npm run rebuild-index    # rebuild data/index.json from data/*.json
 npm test
-npm run bot:install && npm run bot   # Discord bot (long-running host)
+npm run bot:install && npm run bot   # Discord bot — see bot/README.md (e.g. Raspberry Pi)
 ```
 
 ### Backfill (Torn day windows)
@@ -116,7 +120,8 @@ Secret `TORN_API_KEY`. Optional `DISCORD_WEBHOOK_URL`. Runs at 12:05 TCT (UTC), 
 | `POST /api/admin/test-bot` | Test bot → API auth |
 | `POST /api/logout` | Clear session |
 | `GET /api/live` | Live stats for **today’s calendar date** (00:00–23:59 TCT), with paginated attack fetches |
-| `GET /api/hits-today` | Full attack log for today (table report; also at `/hits-today`) |
+| `GET /api/hits-today` | Full attack log (`?mode=calendar` or `?mode=war`) — page at `/hits-today` |
+| `GET /api/today` | Summary for Discord bot (top hitters, inactive list, report URL) |
 | `GET /api/online` | Online list + ping text |
 | `GET /api/history?limit=14` | Chart summaries (from index) |
 | `GET /api/day?date=` | Full day + analytics |

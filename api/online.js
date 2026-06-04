@@ -1,7 +1,9 @@
 import { requireAuth } from '../lib/auth.js';
 import { applyRateLimit } from '../lib/rate-limit.js';
 import { isBotAuthed } from '../lib/bot-auth.js';
-import { getLiveFaction, formatOnlineList } from '../lib/torn.js';
+import { getFactionLiveStats, formatOnlineList } from '../lib/torn.js';
+import { parseStatsMode } from '../lib/stats-window.js';
+import { loadWarConfig } from '../lib/settings.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -13,7 +15,9 @@ export default async function handler(req, res) {
   if (!authedBot && !requireAuth(req, res)) return;
 
   try {
-    const live = await getLiveFaction();
+    const warConfig = await loadWarConfig();
+    const mode = parseStatsMode(req.query?.mode, warConfig);
+    const live = await getFactionLiveStats(mode);
     const chainReady = formatOnlineList(live.members);
     res.status(200).json({
       name: live.name,

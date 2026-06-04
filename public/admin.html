@@ -197,6 +197,29 @@
         <p class="hint">Deployed Vercel URL the bot calls (no trailing slash). Vercel <code>APP_URL</code> env overrides this.</p>
         <label>App URL</label>
         <input type="url" id="appUrl" placeholder="https://your-app.vercel.app" />
+        <div class="section-title" style="margin-top:16px">War / ranked window</div>
+        <p class="hint">When set, the dashboard <strong>Since war</strong> toggle and Discord <code>/today window:war</code> count attacks from this time (TCT / UTC). Leave date empty to disable.</p>
+        <div class="grid2">
+          <div>
+            <label>War label (optional)</label>
+            <input type="text" id="warLabel" placeholder="Ranked war" />
+          </div>
+          <div>
+            <label>Hours before &quot;no hits yet&quot; list</label>
+            <input type="number" id="inactiveAfterHours" min="0" max="24" step="0.5" />
+          </div>
+          <div>
+            <label>War started — date (UTC / TCT)</label>
+            <input type="date" id="warDate" />
+          </div>
+          <div>
+            <label>War started — time (UTC / TCT)</label>
+            <input type="time" id="warTime" step="60" />
+          </div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:8px;text-transform:none;font-size:12px">
+          <input type="checkbox" id="warClear" /> Clear war start (disable war window)
+        </label>
         <div class="section-title" style="margin-top:16px">Analytics thresholds</div>
         <p class="hint">Controls chain underperformer detection on the dashboard Analytics tab.</p>
         <div class="grid2">
@@ -316,6 +339,17 @@ async function loadSettings() {
     document.getElementById('minChainHits').value = a.minChainHits ?? 5;
     document.getElementById('ratioThreshold').value = a.ratioThreshold ?? 0.5;
     document.getElementById('lowHitThreshold').value = a.lowHitThreshold ?? 3;
+    document.getElementById('warLabel').value = p.warLabel || 'War';
+    document.getElementById('inactiveAfterHours').value = p.inactiveAfterHours ?? 2;
+    document.getElementById('warClear').checked = false;
+    if (p.warStartedAt) {
+      const d = new Date(p.warStartedAt * 1000);
+      document.getElementById('warDate').value = d.toISOString().slice(0, 10);
+      document.getElementById('warTime').value = d.toISOString().slice(11, 16);
+    } else {
+      document.getElementById('warDate').value = '';
+      document.getElementById('warTime').value = '';
+    }
   } catch (e) {
     document.getElementById('statusGrid').textContent = e.message;
   }
@@ -481,6 +515,16 @@ async function savePublicSettings() {
             ratioThreshold: Number(document.getElementById('ratioThreshold').value),
             lowHitThreshold: Number(document.getElementById('lowHitThreshold').value),
           },
+          warLabel: document.getElementById('warLabel').value.trim() || 'War',
+          inactiveAfterHours: Number(document.getElementById('inactiveAfterHours').value),
+          warStartedAt: (() => {
+            if (document.getElementById('warClear').checked) return null;
+            const date = document.getElementById('warDate').value;
+            const time = document.getElementById('warTime').value;
+            if (!date) return null;
+            const iso = `${date}T${time || '00:00'}:00.000Z`;
+            return Math.floor(new Date(iso).getTime() / 1000);
+          })(),
         },
       }),
     });

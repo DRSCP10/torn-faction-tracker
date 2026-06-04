@@ -1,4 +1,4 @@
-import { requireAuth } from '../lib/auth.js';
+import { allowMemberOrBot } from '../lib/require-member-or-bot.js';
 import { applyRateLimit } from '../lib/rate-limit.js';
 import { loadIndex } from '../lib/data.js';
 import { getDates, getDay } from '../lib/data.js';
@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     return;
   }
   if (!applyRateLimit(req, res)) return;
-  if (!requireAuth(req, res)) return;
+  if (!(await allowMemberOrBot(req, res))) return;
 
   const limit = Math.min(60, parseInt(req.query?.limit || '14', 10));
   const includeMembers = req.query?.members === '1';

@@ -92,6 +92,21 @@
     font-family: var(--mono); padding: 8px; cursor: pointer; border-radius: 3px;
   }
   .login-err { color: var(--accent); font-family: var(--mono); font-size: 11px; min-height: 1.2em; }
+  .stats-mode-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 1rem;
+  }
+  .mode-btn {
+    font-family: var(--mono); font-size: 11px; text-transform: uppercase;
+    padding: 6px 14px; border-radius: 3px; cursor: pointer; border: 1px solid var(--border);
+    background: var(--bg); color: var(--muted);
+  }
+  .mode-btn.active { border-color: var(--blue); color: var(--blue); }
+  .mode-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .inactive-banner {
+    font-family: var(--mono); font-size: 12px; padding: 10px 14px; margin-bottom: 1rem;
+    border: 1px solid var(--border); border-radius: 4px; background: var(--surface);
+    color: var(--accent);
+  }
 </style>
 </head>
 <body>
@@ -118,6 +133,11 @@
 </header>
 
 <main>
+  <div class="stats-mode-bar">
+    <button type="button" class="mode-btn active" data-mode="calendar" onclick="setReportMode('calendar')">Calendar day</button>
+    <button type="button" class="mode-btn" data-mode="war" id="reportModeWar" onclick="setReportMode('war')" disabled>Since war</button>
+  </div>
+  <div class="inactive-banner" id="inactiveBanner" style="display:none"></div>
   <div class="summary" id="summaryChips"></div>
   <div class="filters">
     <label for="filterResult">Result</label>
@@ -153,6 +173,19 @@
 
 <script>
 let reportRows = [];
+let reportMode = new URLSearchParams(location.search).get('mode') || localStorage.getItem('liveStatsMode') || 'calendar';
+
+function setReportMode(mode) {
+  reportMode = mode;
+  localStorage.setItem('liveStatsMode', mode);
+  const url = new URL(location.href);
+  url.searchParams.set('mode', mode);
+  history.replaceState(null, '', url);
+  document.querySelectorAll('.mode-btn').forEach((b) => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  loadReport();
+}
 
 const LOSS_RESULTS = new Set(['Lost', 'Stalemate', 'Interrupted']);
 const HIT_RESULTS = new Set(['Attacked', 'Hospitalized', 'Mugged', 'Arrested', 'Escape', 'Timeout', 'Special']);
@@ -236,7 +269,7 @@ async function loadReport() {
   const body = document.getElementById('hitsBody');
   body.innerHTML = '<tr><td colspan="7" class="empty">Loading…</td></tr>';
   try {
-    const res = await fetch('/api/hits-today', { credentials: 'include' });
+    const res = await fetch(`/api/hits-today?mode=${encodeURIComponent(reportMode)}`, { credentials: 'include' });
     if (res.status === 401) {
       document.getElementById('loginOverlay').classList.remove('hidden');
       body.innerHTML = '<tr><td colspan="7" class="empty">Login required</td></tr>';
@@ -248,9 +281,23 @@ async function loadReport() {
     }
     const data = await res.json();
     reportRows = data.rows || [];
-    document.getElementById('reportTitle').textContent = `${data.factionName || 'Faction'} · Hits Today`;
-    document.getElementById('reportSub').textContent =
-      `${data.calendarDate || ''} · ${data.dayWindow || ''} · ${data.dayBounds?.from || ''} → ${data.dayBounds?.to || ''}`;
+    document.getElementById('reportTitle').textContent = `${data.factionName || 'Faction'} · Hits Report`;
+    const subParts = [data.dayWindow, data.dayBounds?.from, '→', data.dayBounds?.to].filter(Boolean);
+    document.getElementById('reportSub').textContent = subParts.join(' ');
+    const warBtn = document.getElementById('reportModeWar');
+    if (warBtn) warBtn.disabled = !data.warConfigured;
+    document.querySelectorAll('.mode-btn').forEach((b) => {
+      b.classList.toggle('active', b.dataset.mode === (data.statsMode || reportMode));
+    });
+    if (data.statsMode) reportMode = data.statsMode;
+    const inactive = data.inactiveHitters;
+    const banner = document.getElementById('inactiveBanner');
+    if (inactive?.eligible && inactive.members?.length) {
+      banner.style.display = 'block';
+      banner.textContent = `No hits yet (${inactive.members.length}): ${inactive.members.map((m) => m.name).join(', ')}`;
+    } else {
+      banner.style.display = 'none';
+    }
     document.getElementById('updatedAt').textContent =
       `Updated ${TornTime.formatTctDateTime(new Date())}`;
     renderSummary(data);
@@ -304,6 +351,9 @@ document.getElementById('loginApiKey')?.addEventListener('keydown', (e) => {
 });
 
 (async () => {
+  document.querySelectorAll('.mode-btn').forEach((b) => {
+    b.classList.toggle('active', b.dataset.mode === reportMode);
+  });
   if (await checkAuth()) await loadReport();
 })();
 </script>

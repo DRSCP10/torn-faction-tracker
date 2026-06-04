@@ -1,4 +1,4 @@
-import { requireAuth } from '../lib/auth.js';
+import { allowMemberOrBot } from '../lib/require-member-or-bot.js';
 import { applyRateLimit } from '../lib/rate-limit.js';
 import { getDay } from '../lib/data.js';
 import { compareDays } from '../lib/stats.js';
@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     return;
   }
   if (!applyRateLimit(req, res)) return;
-  if (!requireAuth(req, res)) return;
+  if (!(await allowMemberOrBot(req, res))) return;
 
   const dateA = req.query?.dateA || req.query?.a;
   const dateB = req.query?.dateB || req.query?.b;

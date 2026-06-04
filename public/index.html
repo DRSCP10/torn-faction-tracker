@@ -94,6 +94,21 @@
   .metric-hit-link .label::after {
     content: ' ↗'; font-size: 9px; color: var(--muted); opacity: 0.7;
   }
+  .stats-mode-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 1.25rem;
+    padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .stats-mode-label { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  .mode-btn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 6px 14px; border-radius: 3px; cursor: pointer; border: 1px solid var(--border);
+    background: var(--bg); color: var(--muted);
+  }
+  .mode-btn:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); }
+  .mode-btn.active { border-color: var(--blue); color: var(--blue); background: rgba(59,130,246,0.08); }
+  .mode-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .stats-mode-hint { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: auto; }
+  .inactive-names { font-family: var(--mono); font-size: 12px; line-height: 1.6; color: var(--text); padding: 12px 16px; }
 
   /* Tabs */
   .tabs {
@@ -284,7 +299,7 @@
     <div class="metric purple"><div class="label">Faction Respect</div><div class="val" id="m-faction-respect">—</div><div class="sub" id="m-faction-rank">All time total</div></div>
     <div class="metric red"><div class="label">Respect Today</div><div class="val" id="m-respect">—</div><div class="sub" id="m-torn-day">00:00–23:59 TCT</div></div>
     <div class="metric blue">
-      <a class="metric-hit-link" href="/hits-today" target="_blank" rel="noopener noreferrer" title="Open today&apos;s hits report">
+      <a class="metric-hit-link" id="hitsReportLink" href="/hits-today" target="_blank" rel="noopener noreferrer" title="Open hits report in new tab">
         <div class="label">Hits Today</div>
         <div class="val" id="m-hits">—</div>
       </a>
@@ -292,6 +307,13 @@
     <div class="metric green"><div class="label">Assists Today</div><div class="val" id="m-assists">—</div></div>
     <div class="metric orange"><div class="label">Losses Today</div><div class="val" id="m-losses">—</div><div class="sub" id="m-stealth-on-us"></div></div>
     <div class="metric yellow"><div class="label">Members Online</div><div class="val" id="m-online">—</div><div class="sub" id="m-total-members"></div></div>
+  </div>
+
+  <div class="stats-mode-bar" id="statsModeBar">
+    <span class="stats-mode-label">Live window</span>
+    <button type="button" class="mode-btn active" data-mode="calendar" onclick="setStatsMode('calendar')">Calendar day</button>
+    <button type="button" class="mode-btn" data-mode="war" id="modeWarBtn" onclick="setStatsMode('war')" disabled title="Set war start in Admin">Since war</button>
+    <span class="stats-mode-hint" id="statsModeHint"></span>
   </div>
 
   <!-- Tabs -->
@@ -341,6 +363,15 @@
         </div>
         <div style="padding:12px 16px;font-family:var(--mono);font-size:13px;" id="bestHitToday">—</div>
       </div>
+    </div>
+    <div class="panel full-mb" id="inactivePanel" style="display:none">
+      <div class="panel-header">
+        <span class="panel-title">No hits yet</span>
+        <span class="panel-title" id="inactiveCount">—</span>
+        <button class="btn-refresh" type="button" onclick="copyInactiveNames()">Copy names</button>
+      </div>
+      <div class="inactive-names" id="inactiveNames">—</div>
+      <p class="last-seen" style="padding:0 16px 12px" id="inactiveHint"></p>
     </div>
     <div class="grid2">
       <div class="panel">
@@ -533,7 +564,9 @@ let liveMembers = [];
 let analyticsCache = {};
 let chainCopyNames = '';
 let chainCopyPing = '';
+let inactiveCopyNames = '';
 let alltimeMembers = [];
+let liveStatsMode = localStorage.getItem('liveStatsMode') || 'calendar';
 
 function escapeHtml(s) {
   return String(s)
@@ -639,6 +672,11 @@ setInterval(tickTctClock, 1000);
 // Never persist API keys in browser storage
 
 async function init() {
+  document.querySelectorAll('.mode-btn').forEach((b) => {
+    b.classList.toggle('active', b.dataset.mode === liveStatsMode);
+  });
+  const link = document.getElementById('hitsReportLink');
+  if (link) link.href = `/hits-today?mode=${encodeURIComponent(liveStatsMode)}`;
   setStatus('loading', 'Connecting...');
   await Promise.all([fetchLiveData(), fetchHistoricalData()]);
   startAutoRefresh();
@@ -724,13 +762,76 @@ function copyChainPing() {
   navigator.clipboard?.writeText(chainCopyPing);
 }
 
+function copyInactiveNames() {
+  navigator.clipboard?.writeText(inactiveCopyNames);
+}
+
+function setStatsMode(mode) {
+  liveStatsMode = mode;
+  localStorage.setItem('liveStatsMode', mode);
+  document.querySelectorAll('.mode-btn').forEach((b) => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  const link = document.getElementById('hitsReportLink');
+  if (link) link.href = `/hits-today?mode=${encodeURIComponent(mode)}`;
+  fetchLiveData();
+}
+
+function syncStatsModeUi(data) {
+  const warBtn = document.getElementById('modeWarBtn');
+  if (warBtn) {
+    warBtn.disabled = !data.warConfigured;
+    warBtn.title = data.warConfigured
+      ? `Since ${data.warLabel || 'war'} start`
+      : 'Set war start time in Admin → App settings';
+  }
+  document.querySelectorAll('.mode-btn').forEach((b) => {
+    b.classList.toggle('active', b.dataset.mode === (data.statsMode || liveStatsMode));
+  });
+  if (data.statsMode) liveStatsMode = data.statsMode;
+  const link = document.getElementById('hitsReportLink');
+  if (link) {
+    link.href = data.hitsReportPath || `/hits-today?mode=${liveStatsMode}`;
+  }
+  const hint = document.getElementById('statsModeHint');
+  if (hint) {
+    hint.textContent = data.dayBounds
+      ? `${data.dayBounds.from} → ${data.dayBounds.to}`
+      : '';
+  }
+}
+
+function renderInactiveHitters(inactive) {
+  const panel = document.getElementById('inactivePanel');
+  if (!panel) return;
+  if (!inactive?.eligible) {
+    panel.style.display = 'none';
+    inactiveCopyNames = '';
+    return;
+  }
+  const members = inactive.members || [];
+  if (!members.length) {
+    panel.style.display = 'none';
+    inactiveCopyNames = '';
+    return;
+  }
+  panel.style.display = 'block';
+  document.getElementById('inactiveCount').textContent = `${members.length} members`;
+  document.getElementById('inactiveNames').textContent = members.map((m) => m.name).join(', ');
+  document.getElementById('inactiveHint').textContent =
+    `Listed after ${inactive.inactiveAfterHours}h into the window (${inactive.elapsedHours}h elapsed).`;
+  inactiveCopyNames = members.map((m) => m.name).join(', ');
+}
+
 // ── LIVE DATA ──────────────────────────────────────────────────────────────
 async function fetchLiveData() {
   try {
-    const data = await api('/api/live');
+    const data = await api(`/api/live?mode=${encodeURIComponent(liveStatsMode)}`);
+    syncStatsModeUi(data);
     const dayLabel = data.calendarDate || data.tornDate || '';
     const dayWindow = data.dayWindow || data.tornDayWindow || TornTime.getCalendarDayWindowLabel();
-    document.getElementById('factionName').textContent = `${data.name} · ${dayLabel} (${dayWindow})`;
+    const titleExtra = dayLabel ? `${dayLabel} · ${dayWindow}` : dayWindow;
+    document.getElementById('factionName').textContent = `${data.name} · ${titleExtra}`;
     document.title = `${data.name} · Dashboard`;
     document.getElementById('m-faction-respect').textContent = (data.respect||0).toLocaleString();
     document.getElementById('m-faction-rank').textContent = `Rank: ${data.rank?.name||'—'}`;
@@ -757,6 +858,7 @@ async function fetchLiveData() {
     renderLeaderboard(liveMembers);
     renderPerkProgress(data.perkProgress);
     renderChainOnline(online, idle);
+    renderInactiveHitters(data.inactiveHitters);
 
     const topHits = data.bestHitsToday?.length
       ? data.bestHitsToday

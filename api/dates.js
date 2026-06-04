@@ -1,4 +1,4 @@
-import { requireAuth } from '../lib/auth.js';
+import { allowMemberOrBot } from '../lib/require-member-or-bot.js';
 import { getDates } from '../lib/data.js';
 
 export default async function handler(req, res) {
@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }
-  if (!requireAuth(req, res)) return;
+  if (!(await allowMemberOrBot(req, res))) return;
 
   try {
     const dates = await getDates();
