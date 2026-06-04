@@ -6,20 +6,18 @@
 <title>Faction Dashboard · Lightning Of Destruction</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/theme.css">
+<script src="/theme.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
   :root {
-    --bg: #0a0c10; --surface: #111520; --surface2: #171d2e;
-    --border: rgba(255,255,255,0.07); --accent: #e84040; --accent2: #f97316;
-    --green: #22c55e; --blue: #3b82f6; --yellow: #eab308; --purple: #a855f7;
-    --text: #e2e8f0; --muted: #64748b;
     --mono: 'Share Tech Mono', monospace; --sans: 'Barlow', sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
   body::before {
     content: ''; position: fixed; inset: 0;
-    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, var(--scanline) 2px, var(--scanline) 4px);
     pointer-events: none; z-index: 9999;
   }
   header {
@@ -77,7 +75,7 @@
     background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
     padding: 16px 18px; position: relative; overflow: hidden; transition: border-color 0.3s;
   }
-  .metric:hover { border-color: rgba(255,255,255,0.15); }
+  .metric:hover { border-color: var(--metric-hover); }
   .metric::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
   .metric.red::before { background: var(--accent); }
   .metric.orange::before { background: var(--accent2); }
@@ -90,7 +88,11 @@
   .metric .sub { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 4px; }
 
   /* Tabs */
-  .tabs { display: flex; gap: 2px; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+  .tabs {
+    display: flex; align-items: stretch; gap: 2px; margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border); flex-wrap: wrap;
+  }
+  .tabs-main { display: flex; gap: 2px; flex: 1; min-width: 0; overflow-x: auto; }
   .tab-btn {
     font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
     padding: 8px 20px; cursor: pointer; background: none; border: none; color: var(--muted);
@@ -98,6 +100,11 @@
   }
   .tab-btn:hover { color: var(--text); }
   .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-link {
+    text-decoration: none; display: inline-flex; align-items: center;
+    margin-left: auto; flex-shrink: 0;
+  }
+  .tab-link:hover { color: var(--accent); }
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 
@@ -156,10 +163,10 @@
     border-bottom: 1px solid var(--border); font-weight: 400; white-space: nowrap;
   }
   .members-table th.num { text-align: right; }
-  .members-table td { padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 13px; }
+  .members-table td { padding: 9px 10px; border-bottom: 1px solid var(--row-border); font-size: 13px; }
   .members-table td.num { text-align: right; font-family: var(--mono); font-size: 12px; }
   .members-table tr:last-child td { border-bottom: none; }
-  .members-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .members-table tr:hover td { background: var(--row-hover); }
   .member-name { font-weight: 500; }
   .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; }
   .status-online { background: var(--green); box-shadow: 0 0 6px var(--green); }
@@ -180,7 +187,13 @@
   .progress-bar { height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; }
   .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.5s; }
   .flag-low { color: var(--accent2); }
-  .login-overlay { position: fixed; inset: 0; background: rgba(10,12,16,0.95); z-index: 10000; display: flex; align-items: center; justify-content: center; }
+  .login-overlay { position: fixed; inset: 0; background: var(--overlay-bg); z-index: 10000; display: flex; align-items: center; justify-content: center; }
+  .header-link {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); text-decoration: none; padding: 6px 10px; border: 1px solid var(--border);
+    border-radius: 3px; transition: all 0.2s;
+  }
+  .header-link:hover { border-color: var(--accent); color: var(--accent); }
   .login-box { background: var(--surface); border: 1px solid var(--border); padding: 2rem; border-radius: 6px; width: 320px; text-align: center; }
   .login-box h2 { font-family: var(--mono); font-size: 14px; letter-spacing: 0.12em; margin-bottom: 1rem; text-transform: uppercase; }
   .login-box input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); padding: 10px; border-radius: 3px; margin-bottom: 12px; }
@@ -193,8 +206,9 @@
     header, .api-bar, main { padding-left: 1rem; padding-right: 1rem; }
     .metrics { grid-template-columns: repeat(2, 1fr); }
     .metric .val { font-size: 20px; }
-    .tabs { overflow-x: auto; flex-wrap: nowrap; }
+    .tabs-main { overflow-x: auto; flex-wrap: nowrap; }
     .tab-btn { flex-shrink: 0; padding: 8px 12px; }
+    .tab-link { margin-left: 0; width: 100%; justify-content: center; margin-top: 4px; }
   }
 </style>
 </head>
@@ -225,6 +239,8 @@
   <div class="header-right">
     <div class="live-badge"><div class="live-dot"></div> LIVE</div>
     <span class="countdown" id="countdown">Next refresh in 5:00</span>
+    <a href="/admin.html" class="header-link" id="headerAdminLink">Admin</a>
+    <button type="button" class="btn-refresh" id="themeToggle" onclick="FactionTheme.toggleTheme(); onThemeChange();" title="Toggle theme" aria-label="Toggle theme">☀</button>
     <button class="btn-refresh" id="btnRefresh" onclick="manualRefresh()">↻ Refresh</button>
   </div>
 </header>
@@ -259,11 +275,14 @@
 
   <!-- Tabs -->
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('live', this)">Live</button>
-    <button class="tab-btn" onclick="switchTab('history', this)">History</button>
-    <button class="tab-btn" onclick="switchTab('analytics', this)">Analytics</button>
-    <button class="tab-btn" onclick="switchTab('compare', this)">Compare</button>
-    <button class="tab-btn" onclick="switchTab('alltime', this)">All-Time</button>
+    <div class="tabs-main">
+      <button class="tab-btn active" onclick="switchTab('live', this)">Live</button>
+      <button class="tab-btn" onclick="switchTab('history', this)">History</button>
+      <button class="tab-btn" onclick="switchTab('analytics', this)">Analytics</button>
+      <button class="tab-btn" onclick="switchTab('compare', this)">Compare</button>
+      <button class="tab-btn" onclick="switchTab('alltime', this)">All-Time</button>
+    </div>
+    <a href="/admin.html" class="tab-btn tab-link" id="adminTabLink">Admin</a>
   </div>
 
   <!-- LIVE TAB -->
@@ -568,6 +587,8 @@ async function doLogout() {
 document.getElementById('loginApiKey')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') doLogin();
 });
+
+FactionTheme.initTheme();
 
 (async () => {
   try {
@@ -941,7 +962,11 @@ function renderChart() {
   if (activeStats.assists) datasets.push({ label:'Assists', data:totals('assists'), borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.08)',  tension:0.3, pointRadius:3, borderWidth:2 });
   if (activeStats.losses)  datasets.push({ label:'Losses',  data:totals('losses'),  borderColor:'#f97316', backgroundColor:'rgba(249,115,22,0.08)', tension:0.3, pointRadius:3, borderWidth:2 });
 
-  if (chart) { chart.data.labels = labels; chart.data.datasets = datasets; chart.update(); return; }
+  const theme = window.FactionTheme?.chartThemeOptions?.() || {};
+  if (chart) {
+    chart.destroy();
+    chart = null;
+  }
   chart = new Chart(document.getElementById('mainChart'), {
     type: 'line', data: { labels, datasets },
     options: {
@@ -950,18 +975,25 @@ function renderChart() {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#111520', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
-          titleColor: '#64748b', bodyColor: '#e2e8f0',
+          backgroundColor: theme.tooltipBg || '#111520',
+          borderColor: theme.tooltipBorder || 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          titleColor: theme.tooltipTitle || '#64748b',
+          bodyColor: theme.tooltipBody || '#e2e8f0',
           titleFont: { family: 'Share Tech Mono', size: 11 },
           bodyFont: { family: 'Share Tech Mono', size: 12 }, padding: 10
         }
       },
       scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font: { family: 'Share Tech Mono', size: 10 } } },
-        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font: { family: 'Share Tech Mono', size: 10 } }, beginAtZero: true }
+        x: { grid: { color: theme.grid || 'rgba(255,255,255,0.04)' }, ticks: { color: theme.tick || '#64748b', font: { family: 'Share Tech Mono', size: 10 } } },
+        y: { grid: { color: theme.grid || 'rgba(255,255,255,0.04)' }, ticks: { color: theme.tick || '#64748b', font: { family: 'Share Tech Mono', size: 10 } }, beginAtZero: true }
       }
     }
   });
+}
+
+function onThemeChange() {
+  if (historicalData.length) renderChart();
 }
 
 function toggleStat(el) {
