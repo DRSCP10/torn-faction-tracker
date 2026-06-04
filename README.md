@@ -41,7 +41,9 @@ The root project has **no npm dependencies** on Vercel (API routes use Node buil
 | `TORN_API_KEY` | Faction API key (server-side) |
 | `SESSION_SECRET` | Signs session cookies (required) |
 | `ADMIN_PASSWORD` | Officer login (optional if you set password in Admin → Secrets) |
-| `GITHUB_ACCESS_TOKEN` | Commits `data/access.json` and `data/settings.json` from production admin |
+| `POSTGRES_URL` | **Recommended** — allowlist + settings in Vercel Postgres (Neon); set via Storage → Postgres |
+| `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` | Alternative — Redis / Vercel KV |
+| `GITHUB_ACCESS_TOKEN` | Alternative — commits `data/access.json` and `data/settings.json` from admin |
 | `SETTINGS_ENCRYPTION_KEY` | Optional override for encrypting stored API keys (defaults to `SESSION_SECRET`) |
 | `DISCORD_WEBHOOK_URL` | Daily summary to Discord (Action secret) |
 | `DISCORD_BOT_TOKEN` / `DISCORD_CLIENT_ID` / `DISCORD_GUILD_ID` | Bot |
@@ -68,8 +70,27 @@ npm run rebuild-index
 
 1. Import repo on Vercel
 2. Set `TORN_API_KEY`, `SESSION_SECRET`, `ADMIN_PASSWORD`
-3. Set `GITHUB_ACCESS_TOKEN` if officers will edit allowlist on production admin
+3. For admin edits on production, add **Vercel Postgres** (recommended) or `GITHUB_ACCESS_TOKEN` (see below)
 4. `npx vercel --prod`
+
+### Admin storage (allowlist + settings)
+
+Daily stats (`data/YYYY-MM-DD.json`) stay in the repo and are updated by the GitHub Action. Only the **allowlist** and **admin settings** need writable storage on Vercel.
+
+| Option | Pros | Setup |
+|--------|------|--------|
+| **Vercel Postgres (Neon)** (recommended) | Real DB, free tier, fits Vercel | Project → **Storage** → **Postgres** → Create → Connect. Vercel sets `POSTGRES_URL`. Redeploy. |
+| **Upstash Redis** | Simple key-value | Storage → **Redis** → Connect (`KV_REST_API_*`). |
+| **GitHub API** | No extra service | PAT with repo **Contents: Read and write**. Set `GITHUB_ACCESS_TOKEN`. |
+| **Local dev** | — | Writes to `data/access.json` and `data/settings.json` on disk. |
+
+On first admin save with Postgres connected, the app creates a `faction_storage` table and stores JSON under keys `access` and `settings`. Until then, it falls back to repo files on read.
+
+Optional manual init:
+
+```bash
+npm run db:init   # requires POSTGRES_URL in env
+```
 
 ### Onboarding members
 

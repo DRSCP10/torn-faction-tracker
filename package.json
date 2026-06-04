@@ -8,11 +8,15 @@
     "bot": "node bot/index.js",
     "bot:install": "npm install --prefix bot",
     "rebuild-index": "node scripts/rebuild-index.js",
+    "db:init": "node scripts/init-postgres.js",
     "test": "node --test tests/*.js",
     "dev": "npx vercel dev",
     "deploy": "npx vercel --prod"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0"
   }
 }

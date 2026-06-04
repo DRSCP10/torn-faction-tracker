@@ -202,6 +202,13 @@
   .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1rem; }
   .toolbar .btn-refresh { margin: 0; }
   .chain-copy { font-family: var(--mono); font-size: 11px; background: var(--bg); border: 1px solid var(--border); padding: 8px; border-radius: 3px; margin-top: 8px; word-break: break-word; }
+  .top-hits-list { list-style: none; padding: 0; margin: 0; }
+  .top-hits-list li {
+    padding: 10px 0; border-bottom: 1px solid var(--row-border);
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  }
+  .top-hits-list li:last-child { border-bottom: none; }
+  .top-hits-rank { color: var(--muted); font-size: 11px; min-width: 1.2em; }
   @media (max-width: 700px) {
     header, .api-bar, main { padding-left: 1rem; padding-right: 1rem; }
     .metrics { grid-template-columns: repeat(2, 1fr); }
@@ -316,9 +323,9 @@
       </div>
       <div class="panel">
         <div class="panel-header">
-          <span class="panel-title">Today's Best Hit</span>
+          <span class="panel-title">Today's Top 5 Hits</span>
         </div>
-        <div style="padding:20px 16px;font-family:var(--mono);font-size:13px;" id="bestHitToday">—</div>
+        <div style="padding:12px 16px;font-family:var(--mono);font-size:13px;" id="bestHitToday">—</div>
       </div>
     </div>
     <div class="grid2">
@@ -513,6 +520,14 @@ let analyticsCache = {};
 let chainCopyNames = '';
 let chainCopyPing = '';
 let alltimeMembers = [];
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
 async function api(path, opts = {}) {
   const res = await fetch(path, { credentials: 'include', ...opts });
@@ -712,9 +727,15 @@ async function fetchLiveData() {
     renderPerkProgress(data.perkProgress);
     renderChainOnline(online, idle);
 
-    const bh = data.bestHitToday;
-    document.getElementById('bestHitToday').innerHTML = bh
-      ? `<span class="respect-val">${bh.respect.toFixed(2)}r</span> on <strong>${bh.target}</strong> — ${bh.member}`
+    const topHits = data.bestHitsToday?.length
+      ? data.bestHitsToday
+      : data.bestHitToday
+        ? [data.bestHitToday]
+        : [];
+    document.getElementById('bestHitToday').innerHTML = topHits.length
+      ? `<ol class="top-hits-list">${topHits.map((h, i) =>
+          `<li><span class="top-hits-rank">${i + 1}.</span><span class="respect-val">${h.respect.toFixed(2)}r</span> on <strong>${escapeHtml(h.target)}</strong> — ${escapeHtml(h.member)}</li>`
+        ).join('')}</ol>`
       : '<span class="empty">No hits yet today</span>';
 
     if (data.warnings?.length) {

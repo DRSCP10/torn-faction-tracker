@@ -57,6 +57,29 @@ describe('memberStatsFromAttacks', () => {
     assert.equal(alice.lowRespectHits, 1);
     assert.equal(alice.chainRespect, 5.2);
   });
+
+  it('returns top 5 hits by respect gain', () => {
+    const attacks = {};
+    for (let i = 0; i < 8; i++) {
+      attacks[`a${i}`] = {
+        attacker_id: 1,
+        attacker_name: 'Alice',
+        defender_name: `Target${i}`,
+        result: 'Attacked',
+        respect_gain: i + 1,
+        chain: 0,
+        started: 1000 + i,
+      };
+    }
+    const { bestHits, bestHit } = memberStatsFromAttacks(attacks, {
+      1: { name: 'Alice' },
+    });
+    assert.equal(bestHits.length, 5);
+    assert.equal(bestHits[0].respect, 8);
+    assert.equal(bestHits[0].target, 'Target7');
+    assert.equal(bestHits[4].respect, 4);
+    assert.equal(bestHit.respect, 8);
+  });
 });
 
 describe('underperformers', () => {

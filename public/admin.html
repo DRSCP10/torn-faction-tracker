@@ -239,7 +239,9 @@
       <div class="panel">
         <div class="section-title">Deployment notes</div>
         <ul class="hint" style="padding-left:1.2rem">
-          <li><strong>GITHUB_ACCESS_TOKEN</strong> — repo write token so admin saves commit <code>data/access.json</code> and <code>data/settings.json</code></li>
+          <li><strong>Vercel Postgres</strong> (recommended) — Vercel → Storage → Postgres; adds <code>POSTGRES_URL</code>. Table <code>faction_storage</code> is created on first save.</li>
+          <li><strong>Upstash Redis</strong> — alternative KV via <code>KV_REST_API_*</code></li>
+          <li><strong>GITHUB_ACCESS_TOKEN</strong> — commits <code>data/access.json</code> and <code>data/settings.json</code> to the repo</li>
           <li><strong>SESSION_SECRET</strong> — required for cookies and encrypting stored API keys</li>
           <li>Daily fetch runs via GitHub Action — update <code>TORN_API_KEY</code> secret there too if you rotate keys</li>
           <li>Discord bot host reads <code>data/settings.json</code> from disk or GitHub — restart bot after changing App URL / bot secret</li>
@@ -327,7 +329,7 @@ function renderStatus(s) {
     ['App URL (bot)', s.appUrlFromEnv ? `Vercel env — ${s.appUrl || ''}` : s.appUrlFromStore ? `Stored — ${s.appUrl || ''}` : 'Not set'],
     ['Bot API secret', s.botFromEnv ? `Vercel env ${s.botPreview || ''}` : s.botFromStore ? `Stored ${s.botPreview || ''}` : 'Not set'],
     ['Session secret', s.sessionSecretFromEnv ? 'Vercel env' : 'Missing — required'],
-    ['GitHub saves', s.githubSave ? 'Enabled' : 'Need GITHUB_ACCESS_TOKEN on Vercel'],
+    ['Admin storage', s.postgresConfigured ? 'Vercel Postgres (Neon)' : s.kvConfigured ? 'Upstash Redis / Vercel KV' : s.adminSave ? 'GitHub or local files' : 'Need Postgres, KV, or GITHUB_ACCESS_TOKEN'],
   ];
   document.getElementById('statusGrid').innerHTML = lines.map(([k, v]) =>
     `<div><strong>${k}:</strong> ${v}</div>`

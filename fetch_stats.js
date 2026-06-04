@@ -49,12 +49,12 @@ async function fetchDay(date, allMembers, factionRespect, apiKey) {
     return null;
   }
 
-  const { members, bestHit } = memberStatsFromAttacks(
+  const { members, bestHits } = memberStatsFromAttacks(
     attacks.attacks,
     allMembers
   );
   const chains = computeChainTimes(attacks.attacks);
-  const meta = buildDayMeta(members, bestHit);
+  const meta = buildDayMeta(members, bestHits);
 
   return {
     date,
