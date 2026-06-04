@@ -38,7 +38,7 @@ async function notifyDiscord(day) {
   console.log('Posted summary to Discord webhook');
 }
 
-async function fetchDay(date, allMembers, factionRespect, apiKey) {
+async function fetchDay(date, allMembers, factionId, factionRespect, apiKey) {
   const { fromTs, toTs } = tornDayBounds(date);
   const attacks = await fetchJSON(
     `${BASE}/faction/?selections=attacks&from=${fromTs}&to=${toTs}&key=${apiKey}`
@@ -51,7 +51,8 @@ async function fetchDay(date, allMembers, factionRespect, apiKey) {
 
   const { members, bestHits } = memberStatsFromAttacks(
     attacks.attacks,
-    allMembers
+    allMembers,
+    factionId
   );
   const chains = computeChainTimes(attacks.attacks);
   const meta = buildDayMeta(members, bestHits);
@@ -90,6 +91,7 @@ async function run() {
   }
 
   const allMembers = basic.members || {};
+  const factionId = basic.ID;
   const factionRespect = basic.respect || 0;
   fs.mkdirSync('data', { recursive: true });
 
@@ -102,7 +104,7 @@ async function run() {
     while (current <= end) {
       const dateStr = current.toISOString().slice(0, 10);
       console.log(`Fetching Torn day ${dateStr}...`);
-      const snapshot = await fetchDay(dateStr, allMembers, factionRespect, API_KEY);
+      const snapshot = await fetchDay(dateStr, allMembers, factionId, factionRespect, API_KEY);
       if (snapshot) await saveDay(snapshot);
       await sleep(1000);
       current.setUTCDate(current.getUTCDate() + 1);
@@ -111,7 +113,7 @@ async function run() {
   } else {
     const dateStr = getLastCompletedTornDate();
     console.log(`Fetching completed Torn day: ${dateStr}`);
-    const snapshot = await fetchDay(dateStr, allMembers, factionRespect, API_KEY);
+    const snapshot = await fetchDay(dateStr, allMembers, factionId, factionRespect, API_KEY);
     if (snapshot) {
       await saveDay(snapshot);
       await notifyDiscord(snapshot);
@@ -120,7 +122,7 @@ async function run() {
     const liveDate = getCurrentTornDate();
     if (liveDate !== dateStr) {
       console.log(`Also refreshing in-progress Torn day: ${liveDate}`);
-      const live = await fetchDay(liveDate, allMembers, factionRespect, API_KEY);
+      const live = await fetchDay(liveDate, allMembers, factionId, factionRespect, API_KEY);
       if (live) await saveDay(live);
     }
   }

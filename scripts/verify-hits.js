@@ -64,7 +64,11 @@ for (const a of attackList) {
   byResult[a.result] = (byResult[a.result] || 0) + 1;
 }
 
-const { members } = memberStatsFromAttacks(attacks, basic.members);
+const { members, stealthAttacksOnUs } = memberStatsFromAttacks(
+  attacks,
+  basic.members,
+  basic.ID
+);
 const totalHits = members.reduce((s, m) => s + m.hits, 0);
 const hitResultsOnly = attackList.filter((a) => HIT_RESULTS.includes(a.result)).length;
 
@@ -82,6 +86,7 @@ console.log('');
 console.log('Raw attack records from API:', attackList.length);
 console.log('Hits (HIT_RESULTS types):', hitResultsOnly);
 console.log('Dashboard total hits (sum of members):', totalHits);
+console.log('Stealth attacks on us:', stealthAttacksOnUs);
 console.log('');
 console.log('Result breakdown:', byResult);
 console.log('');

@@ -278,7 +278,7 @@
     <div class="metric red"><div class="label">Respect Today</div><div class="val" id="m-respect">—</div><div class="sub" id="m-torn-day">00:00–23:59 TCT</div></div>
     <div class="metric blue"><div class="label">Hits Today</div><div class="val" id="m-hits">—</div></div>
     <div class="metric green"><div class="label">Assists Today</div><div class="val" id="m-assists">—</div></div>
-    <div class="metric orange"><div class="label">Losses Today</div><div class="val" id="m-losses">—</div></div>
+    <div class="metric orange"><div class="label">Losses Today</div><div class="val" id="m-losses">—</div><div class="sub" id="m-stealth-on-us"></div></div>
     <div class="metric yellow"><div class="label">Members Online</div><div class="val" id="m-online">—</div><div class="sub" id="m-total-members"></div></div>
   </div>
 
@@ -733,6 +733,10 @@ async function fetchLiveData() {
     document.getElementById('m-hits').textContent     = data.totals.hits;
     document.getElementById('m-assists').textContent  = data.totals.assists;
     document.getElementById('m-losses').textContent   = data.totals.losses;
+    const stealthOnUs = data.totals.stealthAttacksOnUs || 0;
+    document.getElementById('m-stealth-on-us').textContent = stealthOnUs
+      ? `${stealthOnUs}× ${data.stealthIncomingLabel || 'Attacked by Someone (stealth)'}`
+      : '';
     document.getElementById('m-online').textContent   = online.length;
     document.getElementById('m-total-members').textContent = `of ${liveMembers.length} members`;
     document.getElementById('memberCount').textContent = `${liveMembers.length} members`;
@@ -771,8 +775,11 @@ function renderMembersTable(arr) {
   body.innerHTML = sorted.map(m => {
     const cls = m.status==='Online'?'status-online':m.status==='Idle'?'status-idle':'status-offline';
     const avg = m.hits > 0 ? (m.respect / m.hits).toFixed(2) : '0.00';
+    const stealthNote = (m.stealthAttacksOnUs || 0) > 0
+      ? `<div class="last-seen" style="color:var(--accent);margin-top:4px">${m.stealthAttacksOnUs}× ${escapeHtml(m.stealthIncomingLabel || 'Attacked by Someone (stealth)')}</div>`
+      : '';
     return `<tr>
-      <td class="member-name">${memberLink(m)}</td>
+      <td class="member-name">${memberLink(m)}${stealthNote}</td>
       <td><span class="status-dot ${cls}"></span><span class="last-seen">${m.status==='Online'?'Online':m.lastAction}</span></td>
       <td class="num respect-val">${Number(m.respect).toFixed(2)}</td>
       <td class="num">${m.hits} <span style="color:var(--muted);font-size:10px">(${avg})</span></td>

@@ -2,6 +2,9 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   memberStatsFromAttacks,
+  resolveAttackerName,
+  STEALTH_OUTGOING_LABEL,
+  STEALTH_INCOMING_LABEL,
   computeChainTimes,
   buildDayMeta,
 } from '../lib/compute.js';
@@ -45,6 +48,70 @@ describe('memberStatsFromAttacks', () => {
     assert.equal(alice.chainHits, 2);
     assert.equal(alice.lowRespectHits, 1);
     assert.equal(alice.chainRespect, 5.2);
+  });
+
+  it('outgoing stealth without a name uses our-stealth label', () => {
+    const attacks = {
+      s1: {
+        attacker_id: 99,
+        attacker_name: '',
+        stealthed: 1,
+        attacker_faction: 56493,
+        defender_faction: 0,
+        defender_name: 'Victim',
+        result: 'Mugged',
+        respect_gain: 1.5,
+        chain: 0,
+        started: 2000,
+      },
+    };
+    const { members, bestHits } = memberStatsFromAttacks(
+      attacks,
+      { 99: { name: 'Roman5053' } },
+      56493
+    );
+    const stealth = members.find((m) => m.id === 'stealth:99');
+    assert.equal(stealth.name, STEALTH_OUTGOING_LABEL);
+    assert.equal(stealth.hits, 1);
+    assert.equal(bestHits[0].member, STEALTH_OUTGOING_LABEL);
+    assert.equal(
+      resolveAttackerName({ stealthed: 1, attacker_name: '' }, 'Roman5053'),
+      STEALTH_OUTGOING_LABEL
+    );
+    assert.equal(
+      resolveAttackerName({ stealthed: 0, attacker_name: '' }, 'Roman5053'),
+      'Roman5053'
+    );
+  });
+
+  it('incoming stealth on a member is not credited as our stealth hit', () => {
+    const attacks = {
+      i1: {
+        attacker_id: '',
+        attacker_name: '',
+        stealthed: 1,
+        defender_id: 10,
+        defender_name: 'Roman5053',
+        defender_faction: 56493,
+        attacker_faction: '',
+        result: 'Mugged',
+        respect_gain: 1.31,
+        started: 2000,
+      },
+    };
+    const { members, stealthAttacksOnUs, bestHits } = memberStatsFromAttacks(
+      attacks,
+      { 10: { name: 'Roman5053' } },
+      56493
+    );
+    assert.equal(stealthAttacksOnUs, 1);
+    const roman = members.find((m) => m.id === '10');
+    assert.equal(roman.stealthAttacksOnUs, 1);
+    assert.equal(roman.hits, 0);
+    assert.equal(roman.losses, 1);
+    assert.equal(members.find((m) => m.id === 'stealth:hidden'), undefined);
+    assert.equal(bestHits.length, 0);
+    assert.equal(STEALTH_INCOMING_LABEL, 'Attacked by Someone (stealth)');
   });
 
   it('returns top 5 hits by respect gain', () => {
