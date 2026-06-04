@@ -3,23 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Faction Admin · Access Control</title>
+<title>Faction Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0a0c10; --surface: #111520; --border: rgba(255,255,255,0.07);
-    --accent: #e84040; --green: #22c55e; --text: #e2e8f0; --muted: #64748b;
+    --accent: #e84040; --green: #22c55e; --amber: #f59e0b; --text: #e2e8f0; --muted: #64748b;
     --mono: 'Share Tech Mono', monospace; --sans: 'Barlow', sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; padding: 2rem; }
-  .wrap { max-width: 720px; margin: 0 auto; }
+  .wrap { max-width: 820px; margin: 0 auto; }
   h1 { font-family: var(--mono); font-size: 16px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.5rem; }
-  .sub { color: var(--muted); font-size: 13px; margin-bottom: 2rem; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 1.5rem; line-height: 1.5; }
   .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 1.5rem; margin-bottom: 1.5rem; }
   label { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: 6px; }
-  input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); padding: 10px; border-radius: 3px; margin-bottom: 12px; }
+  input, textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); padding: 10px; border-radius: 3px; margin-bottom: 12px; font-size: 13px; }
+  textarea { min-height: 72px; resize: vertical; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .grid2 { grid-template-columns: 1fr; } }
   button, .btn {
     font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
     padding: 10px 18px; border-radius: 3px; cursor: pointer; border: none;
@@ -29,67 +31,220 @@
   .btn-ghost { background: none; border: 1px solid var(--border); color: var(--muted); }
   .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
   .err { color: var(--accent); font-family: var(--mono); font-size: 12px; min-height: 18px; margin-bottom: 8px; }
-  .ok { color: var(--green); font-family: var(--mono); font-size: 12px; }
+  .ok { color: var(--green); font-family: var(--mono); font-size: 12px; margin-bottom: 8px; }
+  .warn { color: var(--amber); font-family: var(--mono); font-size: 12px; margin-bottom: 8px; }
   table { width: 100%; border-collapse: collapse; margin-top: 12px; }
   th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
   th { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; font-weight: 400; }
   .hidden { display: none !important; }
   a { color: var(--accent); font-family: var(--mono); font-size: 12px; }
-  .toolbar { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .toolbar { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .tab {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 8px 14px; background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+    border-radius: 3px; cursor: pointer;
+  }
+  .tab.active { border-color: var(--accent); color: var(--accent); }
+  .section-title { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.1em; }
+  .badge { display: inline-block; font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 2px; margin-left: 8px; }
+  .badge-env { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge-store { background: rgba(245,158,11,0.15); color: var(--amber); }
+  .status-grid { display: grid; gap: 8px; margin-bottom: 16px; font-size: 12px; color: var(--muted); }
+  .status-grid span strong { color: var(--text); font-family: var(--mono); }
+  .audit { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .audit li { margin-bottom: 6px; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .hint { font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.5; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Access Admin</h1>
-  <p class="sub">Grant faction members access by Torn ID + username. They log in with their own API key; we verify identity with Torn.</p>
+  <h1>Faction Admin</h1>
+  <p class="sub">Manage member access, faction API key, officer password, analytics thresholds, and connection tests. Vercel env vars override stored secrets when set.</p>
 
   <div id="adminLogin" class="panel">
     <label>Officer password</label>
-    <input type="password" id="adminPassword" placeholder="ADMIN_PASSWORD" autocomplete="current-password" />
+    <input type="password" id="adminPassword" placeholder="Admin password" autocomplete="current-password" />
     <div class="err" id="adminLoginErr"></div>
     <button class="btn-primary" onclick="adminLogin()">Admin login</button>
     <p style="margin-top:12px"><a href="/">← Back to dashboard</a></p>
   </div>
 
   <div id="adminPanel" class="hidden">
-    <div class="panel">
-      <h2 style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.1em">Add member access</h2>
-      <div class="grid2">
-        <div>
-          <label>Username (Torn name)</label>
-          <input type="text" id="userName" placeholder="Dwayne" />
+    <div class="tabs">
+      <button class="tab active" data-tab="access" onclick="switchTab('access')">Access</button>
+      <button class="tab" data-tab="secrets" onclick="switchTab('secrets')">Secrets</button>
+      <button class="tab" data-tab="settings" onclick="switchTab('settings')">App settings</button>
+      <button class="tab" data-tab="tools" onclick="switchTab('tools')">Tools</button>
+    </div>
+
+    <div id="tab-access" class="tab-panel active">
+      <div class="panel">
+        <div class="section-title">Add member access</div>
+        <p class="hint">Members log in with their own Torn API key. We verify identity with Torn and match Torn ID on this list.</p>
+        <div class="grid2">
+          <div>
+            <label>Username (Torn name)</label>
+            <input type="text" id="userName" placeholder="Dwayne" />
+          </div>
+          <div>
+            <label>Torn ID</label>
+            <input type="text" id="userId" placeholder="345343" />
+          </div>
         </div>
-        <div>
-          <label>Torn ID</label>
-          <input type="text" id="userId" placeholder="345343" />
+        <div class="err" id="addErr"></div>
+        <div class="ok" id="addOk"></div>
+        <div class="toolbar">
+          <button class="btn-primary" onclick="addUser()">Allow access</button>
+          <button class="btn-ghost" onclick="loadUsers()">Refresh</button>
         </div>
       </div>
-      <div class="err" id="addErr"></div>
-      <div class="ok" id="addOk"></div>
-      <div class="toolbar">
-        <button class="btn-primary" onclick="addUser()">Allow access</button>
-        <button class="btn-ghost" onclick="loadUsers()">Refresh</button>
-        <button class="btn-ghost" onclick="logout()">Logout</button>
-        <a href="/" style="margin-left:auto;line-height:32px">Dashboard →</a>
+      <div class="panel">
+        <div class="section-title">Allowed users</div>
+        <table>
+          <thead><tr><th>Name</th><th>ID</th><th>Added</th><th></th></tr></thead>
+          <tbody id="usersBody"><tr><td colspan="4">Loading…</td></tr></tbody>
+        </table>
       </div>
     </div>
 
-    <div class="panel">
-      <h2 style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:8px;text-transform:uppercase">Allowed users</h2>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:8px">When they visit the dashboard they enter <strong>their</strong> Torn API key. We check the key owner matches this list.</p>
-      <table>
-        <thead><tr><th>Name</th><th>ID</th><th>Added</th><th></th></tr></thead>
-        <tbody id="usersBody"><tr><td colspan="4">Loading…</td></tr></tbody>
-      </table>
+    <div id="tab-secrets" class="tab-panel">
+      <div class="panel">
+        <div class="section-title">Configuration status</div>
+        <div class="status-grid" id="statusGrid">Loading…</div>
+        <p class="hint">Values in Vercel Environment Variables take priority. Stored secrets in <code>data/settings.json</code> are encrypted with <code>SESSION_SECRET</code> and committed via GitHub when you save on production.</p>
+      </div>
+      <div class="panel">
+        <div class="section-title">Change officer password</div>
+        <label>Current password</label>
+        <input type="password" id="curPw" autocomplete="current-password" />
+        <label>New password (min 8 chars)</label>
+        <input type="password" id="newPw" autocomplete="new-password" />
+        <label>Confirm new password</label>
+        <input type="password" id="newPw2" autocomplete="new-password" />
+        <div class="err" id="pwErr"></div>
+        <div class="ok" id="pwOk"></div>
+        <button class="btn-primary" onclick="savePassword()">Update password</button>
+      </div>
+      <div class="panel">
+        <div class="section-title">Discord bot API</div>
+        <p class="hint">Lets the Discord bot call your deployed app (<code>/api/summary</code>, <code>/api/online</code>) without a member login. Set the same secret on both sides. Bot host still needs <code>DISCORD_BOT_TOKEN</code> in its own env.</p>
+        <label>Current password (required to save)</label>
+        <input type="password" id="botCurPw" autocomplete="current-password" />
+        <label>Bot API secret (min 16 chars)</label>
+        <input type="password" id="botSecret" placeholder="Generate a long random string" autocomplete="off" />
+        <div class="err" id="botErr"></div>
+        <div class="ok" id="botOk"></div>
+        <div class="toolbar">
+          <button class="btn-primary" onclick="saveBotSecret()">Save bot secret</button>
+          <button class="btn-ghost" onclick="clearBotSecret()">Clear stored secret</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="section-title">Faction Torn API key</div>
+        <p class="hint">Server-side key for faction stats. Enable <strong>Faction API Access</strong> in Torn key settings (attacks, basic, upgrades).</p>
+        <label>Current password (required to save)</label>
+        <input type="password" id="tornCurPw" autocomplete="current-password" />
+        <label>New faction API key</label>
+        <input type="password" id="tornKey" placeholder="Leave blank to keep current" autocomplete="off" />
+        <div class="err" id="tornErr"></div>
+        <div class="ok" id="tornOk"></div>
+        <div class="toolbar">
+          <button class="btn-primary" onclick="saveTornKey()">Save API key</button>
+          <button class="btn-ghost" onclick="clearTornKey()">Clear stored key</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="section-title">Recent audit</div>
+        <ul class="audit" id="auditList"><li>None yet</li></ul>
+      </div>
+    </div>
+
+    <div id="tab-settings" class="tab-panel">
+      <div class="panel">
+        <div class="section-title">Display &amp; notifications</div>
+        <label>Current password</label>
+        <input type="password" id="settingsCurPw" autocomplete="current-password" />
+        <label>Faction display name (optional)</label>
+        <input type="text" id="factionName" placeholder="Shown in exports / summaries" />
+        <label>Discord webhook URL (daily summary)</label>
+        <input type="url" id="discordWebhook" placeholder="https://discord.com/api/webhooks/..." />
+        <div class="section-title" style="margin-top:16px">Discord bot</div>
+        <p class="hint">Deployed Vercel URL the bot calls (no trailing slash). Vercel <code>APP_URL</code> env overrides this.</p>
+        <label>App URL</label>
+        <input type="url" id="appUrl" placeholder="https://your-app.vercel.app" />
+        <div class="section-title" style="margin-top:16px">Analytics thresholds</div>
+        <p class="hint">Controls chain underperformer detection on the dashboard Analytics tab.</p>
+        <div class="grid2">
+          <div>
+            <label>Min chain hits to compare</label>
+            <input type="number" id="minChainHits" min="1" max="50" step="1" />
+          </div>
+          <div>
+            <label>Ratio threshold (0–1)</label>
+            <input type="number" id="ratioThreshold" min="0.1" max="1" step="0.05" />
+          </div>
+          <div>
+            <label>Low hit threshold</label>
+            <input type="number" id="lowHitThreshold" min="1" max="20" step="1" />
+          </div>
+        </div>
+        <div class="err" id="settingsErr"></div>
+        <div class="ok" id="settingsOk"></div>
+        <button class="btn-primary" onclick="savePublicSettings()">Save settings</button>
+      </div>
+    </div>
+
+    <div id="tab-tools" class="tab-panel">
+      <div class="panel">
+        <div class="section-title">Test Torn API connection</div>
+        <p class="hint">Uses the active faction key (Vercel env or stored secret). Checks basic faction data and a recent attacks sample.</p>
+        <div class="err" id="testErr"></div>
+        <div class="ok" id="testOk"></div>
+        <pre id="testOut" style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:pre-wrap;margin-top:8px"></pre>
+        <button class="btn-primary" onclick="testTorn()">Run test</button>
+      </div>
+      <div class="panel">
+        <div class="section-title">Test Discord bot API</div>
+        <p class="hint">Pings <code>APP_URL/api/summary</code> with the configured bot secret. A 404 means auth worked but no data for the probe date.</p>
+        <div class="err" id="testBotErr"></div>
+        <div class="ok" id="testBotOk"></div>
+        <pre id="testBotOut" style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:pre-wrap;margin-top:8px"></pre>
+        <button class="btn-primary" onclick="testBot()">Run bot test</button>
+      </div>
+      <div class="panel">
+        <div class="section-title">Deployment notes</div>
+        <ul class="hint" style="padding-left:1.2rem">
+          <li><strong>GITHUB_ACCESS_TOKEN</strong> — repo write token so admin saves commit <code>data/access.json</code> and <code>data/settings.json</code></li>
+          <li><strong>SESSION_SECRET</strong> — required for cookies and encrypting stored API keys</li>
+          <li>Daily fetch runs via GitHub Action — update <code>TORN_API_KEY</code> secret there too if you rotate keys</li>
+          <li>Discord bot host reads <code>data/settings.json</code> from disk or GitHub — restart bot after changing App URL / bot secret</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="toolbar" style="margin-top:0">
+      <button class="btn-ghost" onclick="logout()">Logout</button>
+      <a href="/" style="margin-left:auto;line-height:32px">Dashboard →</a>
     </div>
   </div>
 </div>
 <script>
+let settingsCache = null;
+
 async function api(path, opts = {}) {
   const res = await fetch(path, { credentials: 'include', ...opts });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error || res.statusText);
   return json;
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `tab-${name}`));
+  if (name === 'secrets' || name === 'settings') loadSettings();
 }
 
 async function checkAdmin() {
@@ -99,6 +254,7 @@ async function checkAdmin() {
       document.getElementById('adminLogin').classList.add('hidden');
       document.getElementById('adminPanel').classList.remove('hidden');
       loadUsers();
+      loadSettings();
       return true;
     }
   } catch {}
@@ -116,8 +272,235 @@ async function adminLogin() {
     document.getElementById('adminLogin').classList.add('hidden');
     document.getElementById('adminPanel').classList.remove('hidden');
     loadUsers();
+    loadSettings();
   } catch (e) {
     document.getElementById('adminLoginErr').textContent = e.message;
+  }
+}
+
+async function loadSettings() {
+  try {
+    const data = await api('/api/admin/settings');
+    settingsCache = data;
+    renderStatus(data.status);
+    renderAudit(data.audit);
+    const p = data.public || {};
+    document.getElementById('factionName').value = p.factionDisplayName || '';
+    document.getElementById('discordWebhook').value = p.discordWebhookUrl || '';
+    document.getElementById('appUrl').value = p.appUrl || data.status?.appUrl || '';
+    const a = p.analytics || {};
+    document.getElementById('minChainHits').value = a.minChainHits ?? 5;
+    document.getElementById('ratioThreshold').value = a.ratioThreshold ?? 0.5;
+    document.getElementById('lowHitThreshold').value = a.lowHitThreshold ?? 3;
+  } catch (e) {
+    document.getElementById('statusGrid').textContent = e.message;
+  }
+}
+
+function renderStatus(s) {
+  if (!s) return;
+  const lines = [
+    ['Admin password', s.adminFromEnv ? 'Vercel env' : s.adminFromStore ? 'Stored (hashed)' : 'Not set'],
+    ['Faction API key', s.tornFromEnv ? `Vercel env ${s.tornPreview || ''}` : s.tornFromStore ? `Stored ${s.tornPreview || ''}` : 'Not set'],
+    ['App URL (bot)', s.appUrlFromEnv ? `Vercel env — ${s.appUrl || ''}` : s.appUrlFromStore ? `Stored — ${s.appUrl || ''}` : 'Not set'],
+    ['Bot API secret', s.botFromEnv ? `Vercel env ${s.botPreview || ''}` : s.botFromStore ? `Stored ${s.botPreview || ''}` : 'Not set'],
+    ['Session secret', s.sessionSecretFromEnv ? 'Vercel env' : 'Missing — required'],
+    ['GitHub saves', s.githubSave ? 'Enabled' : 'Need GITHUB_ACCESS_TOKEN on Vercel'],
+  ];
+  document.getElementById('statusGrid').innerHTML = lines.map(([k, v]) =>
+    `<div><strong>${k}:</strong> ${v}</div>`
+  ).join('');
+}
+
+function renderAudit(entries) {
+  const el = document.getElementById('auditList');
+  if (!entries?.length) {
+    el.innerHTML = '<li>None yet</li>';
+    return;
+  }
+  el.innerHTML = entries.map(e =>
+    `<li>${(e.at || '').slice(0, 19)} — ${e.action}</li>`
+  ).join('');
+}
+
+async function savePassword() {
+  document.getElementById('pwErr').textContent = '';
+  document.getElementById('pwOk').textContent = '';
+  const cur = document.getElementById('curPw').value;
+  const n1 = document.getElementById('newPw').value;
+  const n2 = document.getElementById('newPw2').value;
+  if (n1 !== n2) {
+    document.getElementById('pwErr').textContent = 'New passwords do not match';
+    return;
+  }
+  try {
+    await api('/api/admin/secrets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword: cur, newAdminPassword: n1 }),
+    });
+    document.getElementById('pwOk').textContent = 'Password updated. Use the new password next login.';
+    document.getElementById('curPw').value = '';
+    document.getElementById('newPw').value = '';
+    document.getElementById('newPw2').value = '';
+    loadSettings();
+  } catch (e) {
+    document.getElementById('pwErr').textContent = e.message;
+  }
+}
+
+async function saveTornKey() {
+  document.getElementById('tornErr').textContent = '';
+  document.getElementById('tornOk').textContent = '';
+  const key = document.getElementById('tornKey').value.trim();
+  if (!key) {
+    document.getElementById('tornErr').textContent = 'Enter a new API key';
+    return;
+  }
+  try {
+    await api('/api/admin/secrets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        currentPassword: document.getElementById('tornCurPw').value,
+        tornApiKey: key,
+      }),
+    });
+    document.getElementById('tornOk').textContent = 'Faction API key saved (encrypted in repo).';
+    document.getElementById('tornKey').value = '';
+    loadSettings();
+  } catch (e) {
+    document.getElementById('tornErr').textContent = e.message;
+  }
+}
+
+async function saveBotSecret() {
+  document.getElementById('botErr').textContent = '';
+  document.getElementById('botOk').textContent = '';
+  const secret = document.getElementById('botSecret').value.trim();
+  if (!secret) {
+    document.getElementById('botErr').textContent = 'Enter a bot API secret';
+    return;
+  }
+  try {
+    await api('/api/admin/secrets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        currentPassword: document.getElementById('botCurPw').value,
+        botApiSecret: secret,
+      }),
+    });
+    document.getElementById('botOk').textContent = 'Bot secret saved. Restart the Discord bot to pick up changes from repo.';
+    document.getElementById('botSecret').value = '';
+    loadSettings();
+  } catch (e) {
+    document.getElementById('botErr').textContent = e.message;
+  }
+}
+
+async function clearBotSecret() {
+  if (!confirm('Remove stored bot API secret? Vercel BOT_API_SECRET env will still work if set.')) return;
+  document.getElementById('botErr').textContent = '';
+  document.getElementById('botOk').textContent = '';
+  try {
+    await api('/api/admin/secrets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        currentPassword: document.getElementById('botCurPw').value,
+        clearBotApiSecret: true,
+      }),
+    });
+    document.getElementById('botOk').textContent = 'Stored bot secret cleared.';
+    loadSettings();
+  } catch (e) {
+    document.getElementById('botErr').textContent = e.message;
+  }
+}
+
+async function clearTornKey() {
+  if (!confirm('Remove stored faction API key? Vercel TORN_API_KEY env will still work if set.')) return;
+  document.getElementById('tornErr').textContent = '';
+  document.getElementById('tornOk').textContent = '';
+  try {
+    await api('/api/admin/secrets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        currentPassword: document.getElementById('tornCurPw').value,
+        clearTornApiKey: true,
+      }),
+    });
+    document.getElementById('tornOk').textContent = 'Stored key cleared.';
+    loadSettings();
+  } catch (e) {
+    document.getElementById('tornErr').textContent = e.message;
+  }
+}
+
+async function savePublicSettings() {
+  document.getElementById('settingsErr').textContent = '';
+  document.getElementById('settingsOk').textContent = '';
+  try {
+    await api('/api/admin/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        currentPassword: document.getElementById('settingsCurPw').value,
+        public: {
+          factionDisplayName: document.getElementById('factionName').value.trim(),
+          discordWebhookUrl: document.getElementById('discordWebhook').value.trim(),
+          appUrl: document.getElementById('appUrl').value.trim().replace(/\/$/, ''),
+          analytics: {
+            minChainHits: Number(document.getElementById('minChainHits').value),
+            ratioThreshold: Number(document.getElementById('ratioThreshold').value),
+            lowHitThreshold: Number(document.getElementById('lowHitThreshold').value),
+          },
+        },
+      }),
+    });
+    document.getElementById('settingsOk').textContent = 'Settings saved.';
+    loadSettings();
+  } catch (e) {
+    document.getElementById('settingsErr').textContent = e.message;
+  }
+}
+
+async function testBot() {
+  document.getElementById('testBotErr').textContent = '';
+  document.getElementById('testBotOk').textContent = '';
+  document.getElementById('testBotOut').textContent = 'Testing…';
+  try {
+    const r = await api('/api/admin/test-bot', { method: 'POST' });
+    if (r.ok) {
+      document.getElementById('testBotOk').textContent = r.hint || 'Bot API OK';
+    } else {
+      document.getElementById('testBotErr').textContent = r.error || r.hint || 'Test failed';
+    }
+    document.getElementById('testBotOut').textContent = JSON.stringify(r, null, 2);
+  } catch (e) {
+    document.getElementById('testBotErr').textContent = e.message;
+    document.getElementById('testBotOut').textContent = '';
+  }
+}
+
+async function testTorn() {
+  document.getElementById('testErr').textContent = '';
+  document.getElementById('testOk').textContent = '';
+  document.getElementById('testOut').textContent = 'Testing…';
+  try {
+    const r = await api('/api/admin/test-torn', { method: 'POST' });
+    if (r.ok) {
+      document.getElementById('testOk').textContent = 'Connection OK';
+      document.getElementById('testOut').textContent = JSON.stringify(r, null, 2);
+    } else {
+      document.getElementById('testErr').textContent = r.error || r.hint || 'Test failed';
+      document.getElementById('testOut').textContent = JSON.stringify(r, null, 2);
+    }
+  } catch (e) {
+    document.getElementById('testErr').textContent = e.message;
+    document.getElementById('testOut').textContent = '';
   }
 }
 
@@ -126,18 +509,25 @@ async function loadUsers() {
   try {
     const { users } = await api('/api/admin/users');
     if (!users.length) {
-      body.innerHTML = '<tr><td colspan="4" style="color:var(--muted)">No users yet — add Dwayne above</td></tr>';
+      body.innerHTML = '<tr><td colspan="4" style="color:var(--muted)">No users yet</td></tr>';
       return;
     }
     body.innerHTML = users.map(u => `<tr>
-      <td><strong>${u.name}</strong></td>
-      <td style="font-family:var(--mono)">${u.id}</td>
+      <td><strong>${escapeHtml(u.name)}</strong></td>
+      <td style="font-family:var(--mono)">${escapeHtml(u.id)}</td>
       <td style="color:var(--muted);font-size:12px">${(u.addedAt||'').slice(0,10)}</td>
-      <td><button class="btn-ghost" onclick="revokeUser('${u.id}')">Revoke</button></td>
+      <td><button class="btn-ghost" onclick="revokeUser('${escapeAttr(u.id)}')">Revoke</button></td>
     </tr>`).join('');
   } catch (e) {
-    body.innerHTML = `<tr><td colspan="4" style="color:var(--accent)">${e.message}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="4" style="color:var(--accent)">${escapeHtml(e.message)}</td></tr>`;
   }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+}
+function escapeAttr(s) {
+  return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 }
 
 async function addUser() {

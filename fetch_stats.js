@@ -11,8 +11,7 @@ import {
 } from './lib/torn-day.js';
 import { rebuildIndex } from './lib/index-store.js';
 import { formatSummaryText } from './lib/stats.js';
-
-const API_KEY = process.env.TORN_API_KEY;
+import { getTornApiKey, loadSettings } from './lib/settings.js';
 const BASE = 'https://api.torn.com';
 const BACKFILL_FROM = process.env.BACKFILL_FROM || null;
 
@@ -26,7 +25,9 @@ function sleep(ms) {
 }
 
 async function notifyDiscord(day) {
-  const url = process.env.DISCORD_WEBHOOK_URL;
+  const settings = await loadSettings();
+  const url =
+    process.env.DISCORD_WEBHOOK_URL || settings.public?.discordWebhookUrl;
   if (!url) return;
   const text = formatSummaryText(day).slice(0, 1900);
   await fetch(url, {
@@ -37,10 +38,10 @@ async function notifyDiscord(day) {
   console.log('Posted summary to Discord webhook');
 }
 
-async function fetchDay(date, allMembers, factionRespect) {
+async function fetchDay(date, allMembers, factionRespect, apiKey) {
   const { fromTs, toTs } = tornDayBounds(date);
   const attacks = await fetchJSON(
-    `${BASE}/faction/?selections=attacks&from=${fromTs}&to=${toTs}&key=${API_KEY}`
+    `${BASE}/faction/?selections=attacks&from=${fromTs}&to=${toTs}&key=${apiKey}`
   );
 
   if (attacks.error) {
@@ -74,6 +75,12 @@ async function saveDay(snapshot) {
 }
 
 async function run() {
+  const API_KEY = await getTornApiKey();
+  if (!API_KEY) {
+    console.error('No TORN_API_KEY: set env var or save in Admin → Secrets');
+    process.exit(1);
+  }
+
   const basic = await fetchJSON(
     `${BASE}/faction/?selections=basic&key=${API_KEY}`
   );
@@ -95,7 +102,7 @@ async function run() {
     while (current <= end) {
       const dateStr = current.toISOString().slice(0, 10);
       console.log(`Fetching Torn day ${dateStr}...`);
-      const snapshot = await fetchDay(dateStr, allMembers, factionRespect);
+      const snapshot = await fetchDay(dateStr, allMembers, factionRespect, API_KEY);
       if (snapshot) await saveDay(snapshot);
       await sleep(1000);
       current.setUTCDate(current.getUTCDate() + 1);
@@ -104,7 +111,7 @@ async function run() {
   } else {
     const dateStr = getLastCompletedTornDate();
     console.log(`Fetching completed Torn day: ${dateStr}`);
-    const snapshot = await fetchDay(dateStr, allMembers, factionRespect);
+    const snapshot = await fetchDay(dateStr, allMembers, factionRespect, API_KEY);
     if (snapshot) {
       await saveDay(snapshot);
       await notifyDiscord(snapshot);
@@ -113,7 +120,7 @@ async function run() {
     const liveDate = getCurrentTornDate();
     if (liveDate !== dateStr) {
       console.log(`Also refreshing in-progress Torn day: ${liveDate}`);
-      const live = await fetchDay(liveDate, allMembers, factionRespect);
+      const live = await fetchDay(liveDate, allMembers, factionRespect, API_KEY);
       if (live) await saveDay(live);
     }
   }

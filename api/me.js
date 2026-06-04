@@ -5,6 +5,7 @@ import {
   getMemberId,
 } from '../lib/auth.js';
 import { loadAccessList } from '../lib/access.js';
+import { isAdminConfigured } from '../lib/settings.js';
 
 export default async function handler(req, res) {
   const admin = isAdmin(req);
@@ -25,6 +26,6 @@ export default async function handler(req, res) {
     isMember: isMember(req),
     user,
     loginType: admin ? 'admin' : user ? 'member' : null,
-    adminConfigured: Boolean(process.env.ADMIN_PASSWORD),
+    adminConfigured: await isAdminConfigured(),
   });
 }

@@ -14,15 +14,32 @@ import { getDates, getDay } from '../lib/data.js';
 const token = process.env.DISCORD_BOT_TOKEN;
 const clientId = process.env.DISCORD_CLIENT_ID;
 const guildId = process.env.DISCORD_GUILD_ID;
-const appUrl = (process.env.APP_URL || '').replace(/\/$/, '');
-const botSecret = process.env.BOT_API_SECRET;
 
 if (!token || !clientId) {
   console.error('Set DISCORD_BOT_TOKEN and DISCORD_CLIENT_ID');
   process.exit(1);
 }
 
+let botConfigCache = null;
+let botConfigCacheAt = 0;
+const BOT_CONFIG_TTL_MS = 60_000;
+
+async function resolveBotConfig() {
+  const now = Date.now();
+  if (botConfigCache && now - botConfigCacheAt < BOT_CONFIG_TTL_MS) {
+    return botConfigCache;
+  }
+  const { getAppUrl, getBotApiSecret } = await import('../lib/settings.js');
+  botConfigCache = {
+    appUrl: await getAppUrl(),
+    botSecret: await getBotApiSecret(),
+  };
+  botConfigCacheAt = now;
+  return botConfigCache;
+}
+
 async function fetchSummaryRemote(date) {
+  const { appUrl, botSecret } = await resolveBotConfig();
   if (!appUrl) return null;
   const url = `${appUrl}/api/summary?date=${date}`;
   const headers = botSecret ? { 'x-bot-secret': botSecret } : {};
@@ -33,6 +50,7 @@ async function fetchSummaryRemote(date) {
 }
 
 async function fetchOnlineRemote() {
+  const { appUrl, botSecret } = await resolveBotConfig();
   if (!appUrl) return null;
   const url = `${appUrl}/api/online`;
   const headers = botSecret ? { 'x-bot-secret': botSecret } : {};
@@ -141,7 +159,9 @@ client.on('interactionCreate', async (interaction) => {
           };
         }
         if (!data) {
-          await interaction.editReply('Could not fetch online list. Set APP_URL or TORN_API_KEY on bot host.');
+          await interaction.editReply(
+            'Could not fetch online list. Set APP_URL + BOT_API_SECRET (admin or env) or TORN_API_KEY on bot host.'
+          );
           return;
         }
         const lines = [

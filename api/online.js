@@ -1,5 +1,6 @@
 import { requireAuth } from '../lib/auth.js';
 import { applyRateLimit } from '../lib/rate-limit.js';
+import { isBotAuthed } from '../lib/bot-auth.js';
 import { getLiveFaction, formatOnlineList } from '../lib/torn.js';
 
 export default async function handler(req, res) {
@@ -8,7 +9,8 @@ export default async function handler(req, res) {
     return;
   }
   if (!applyRateLimit(req, res)) return;
-  if (!requireAuth(req, res)) return;
+  const authedBot = await isBotAuthed(req);
+  if (!authedBot && !requireAuth(req, res)) return;
 
   try {
     const live = await getLiveFaction();

@@ -1,5 +1,6 @@
 import { requireAuth } from '../lib/auth.js';
 import { applyRateLimit } from '../lib/rate-limit.js';
+import { isBotAuthed } from '../lib/bot-auth.js';
 import { getDay } from '../lib/data.js';
 import { formatSummaryText } from '../lib/stats.js';
 
@@ -11,9 +12,7 @@ export default async function handler(req, res) {
   }
   if (!applyRateLimit(req, res)) return;
 
-  const botSecret = process.env.BOT_API_SECRET;
-  const botKey = req.headers['x-bot-secret'] || req.query?.secret;
-  const authedBot = botSecret && botKey === botSecret;
+  const authedBot = await isBotAuthed(req);
   if (!authedBot && !requireAuth(req, res)) return;
 
   const date = req.query?.date;

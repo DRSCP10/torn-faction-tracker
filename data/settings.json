@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "updatedAt": null,
+  "public": {
+    "factionDisplayName": "",
+    "discordWebhookUrl": "",
+    "appUrl": "",
+    "analytics": {
+      "minChainHits": 5,
+      "ratioThreshold": 0.5,
+      "lowHitThreshold": 3,
+      "minHitsLegacy": 8
+    }
+  },
+  "secrets": {},
+  "audit": []
+}

@@ -2,6 +2,7 @@ import { requireAuth } from '../lib/auth.js';
 import { applyRateLimit } from '../lib/rate-limit.js';
 import { getDay } from '../lib/data.js';
 import { topByRespect, topChainTimes, underperformers } from '../lib/stats.js';
+import { loadSettings, getAnalyticsOptions } from '../lib/settings.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -24,6 +25,9 @@ export default async function handler(req, res) {
       return;
     }
 
+    const settings = await loadSettings();
+    const analyticsOpts = getAnalyticsOptions(settings);
+
     res.status(200).json({
       ...day,
       analytics: {
@@ -33,7 +37,8 @@ export default async function handler(req, res) {
           to25: topChainTimes(day.chains, 25, 3),
           to50: topChainTimes(day.chains, 50, 3),
         },
-        underperformers: underperformers(day.members || []),
+        underperformers: underperformers(day.members || [], analyticsOpts),
+        thresholds: analyticsOpts,
       },
     });
   } catch (e) {

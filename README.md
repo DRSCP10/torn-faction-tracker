@@ -6,7 +6,7 @@ Faction dashboard and Discord bot for Torn factions. Tracks respect, chain perfo
 
 ### Private access
 - **Members** log in with their **Torn API key** — server verifies identity with Torn and checks `data/access.json`
-- **Officers** manage access at **`/admin.html`** (username + Torn ID, e.g. Dwayne `345343`)
+- **Officers** manage access, secrets, and app settings at **`/admin.html`** (username + Torn ID, e.g. Dwayne `345343`)
 - Faction stats use server `TORN_API_KEY` only — member keys are never stored
 
 ### Dashboard
@@ -40,11 +40,12 @@ The root project has **no npm dependencies** on Vercel (API routes use Node buil
 |----------|---------|
 | `TORN_API_KEY` | Faction API key (server-side) |
 | `SESSION_SECRET` | Signs session cookies (required) |
-| `ADMIN_PASSWORD` | Officer login for `/admin.html` |
-| `GITHUB_ACCESS_TOKEN` | Saves allowlist from Vercel admin UI |
+| `ADMIN_PASSWORD` | Officer login (optional if you set password in Admin → Secrets) |
+| `GITHUB_ACCESS_TOKEN` | Commits `data/access.json` and `data/settings.json` from production admin |
+| `SETTINGS_ENCRYPTION_KEY` | Optional override for encrypting stored API keys (defaults to `SESSION_SECRET`) |
 | `DISCORD_WEBHOOK_URL` | Daily summary to Discord (Action secret) |
 | `DISCORD_BOT_TOKEN` / `DISCORD_CLIENT_ID` / `DISCORD_GUILD_ID` | Bot |
-| `APP_URL` + `BOT_API_SECRET` | Bot reads deployed API |
+| `APP_URL` + `BOT_API_SECRET` | Bot reads deployed API (or set in Admin → App settings / Secrets) |
 
 ## Commands
 
@@ -72,9 +73,10 @@ npm run rebuild-index
 
 ### Onboarding members
 
-1. Officer opens `/admin.html` → logs in with `ADMIN_PASSWORD`
-2. Adds **Dwayne** with ID **345343** (and each other member)
-3. Member opens dashboard → enters **their** API key → Torn confirms they are Dwayne → access granted
+1. Officer opens `/admin.html` → logs in (`ADMIN_PASSWORD` or password saved in Secrets tab)
+2. **Access** tab: add **Dwayne** with ID **345343** (and each other member)
+3. **Secrets** tab (optional): store faction API key and rotate officer password without redeploying Vercel
+4. Member opens dashboard → enters **their** API key → Torn confirms they are Dwayne → access granted
 
 ## GitHub Action
 
@@ -87,6 +89,10 @@ Secret `TORN_API_KEY`. Optional `DISCORD_WEBHOOK_URL`. Runs at 12:05 UTC, normal
 | `POST /api/auth` | Member login (body: `{ apiKey }`) |
 | `POST /api/admin/auth` | Admin login |
 | `GET/POST/DELETE /api/admin/users` | Manage allowlist |
+| `GET/PATCH /api/admin/settings` | Public settings + status |
+| `POST /api/admin/secrets` | Password / faction API key |
+| `POST /api/admin/test-torn` | Test faction API connection |
+| `POST /api/admin/test-bot` | Test bot → API auth |
 | `POST /api/logout` | Clear session |
 | `GET /api/live` | Live Torn day stats |
 | `GET /api/online` | Online list + ping text |
