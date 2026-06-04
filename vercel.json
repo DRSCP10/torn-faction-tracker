@@ -1,4 +1,5 @@
 {
+  "installCommand": "echo \"No root dependencies — skip install\"",
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/", "destination": "/index.html" }
