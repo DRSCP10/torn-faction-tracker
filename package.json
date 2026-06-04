@@ -1,0 +1,23 @@
+{
+  "name": "torn-faction-tracker",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fetch": "node fetch_stats.js",
+    "bot": "node bot/index.js",
+    "rebuild-index": "node scripts/rebuild-index.js",
+    "test": "node --test tests/*.js",
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "discord.js": "^14.19.3"
+  },
+  "devDependencies": {
+    "vercel": "^41.6.0"
+  }
+}

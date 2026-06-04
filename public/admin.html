@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Faction Admin · Access Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10; --surface: #111520; --border: rgba(255,255,255,0.07);
+    --accent: #e84040; --green: #22c55e; --text: #e2e8f0; --muted: #64748b;
+    --mono: 'Share Tech Mono', monospace; --sans: 'Barlow', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; padding: 2rem; }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1 { font-family: var(--mono); font-size: 16px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.5rem; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 2rem; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  label { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: 6px; }
+  input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); padding: 10px; border-radius: 3px; margin-bottom: 12px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  button, .btn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 10px 18px; border-radius: 3px; cursor: pointer; border: none;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #c53030; }
+  .btn-ghost { background: none; border: 1px solid var(--border); color: var(--muted); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .err { color: var(--accent); font-family: var(--mono); font-size: 12px; min-height: 18px; margin-bottom: 8px; }
+  .ok { color: var(--green); font-family: var(--mono); font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  th { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; font-weight: 400; }
+  .hidden { display: none !important; }
+  a { color: var(--accent); font-family: var(--mono); font-size: 12px; }
+  .toolbar { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Access Admin</h1>
+  <p class="sub">Grant faction members access by Torn ID + username. They log in with their own API key; we verify identity with Torn.</p>
+
+  <div id="adminLogin" class="panel">
+    <label>Officer password</label>
+    <input type="password" id="adminPassword" placeholder="ADMIN_PASSWORD" autocomplete="current-password" />
+    <div class="err" id="adminLoginErr"></div>
+    <button class="btn-primary" onclick="adminLogin()">Admin login</button>
+    <p style="margin-top:12px"><a href="/">← Back to dashboard</a></p>
+  </div>
+
+  <div id="adminPanel" class="hidden">
+    <div class="panel">
+      <h2 style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.1em">Add member access</h2>
+      <div class="grid2">
+        <div>
+          <label>Username (Torn name)</label>
+          <input type="text" id="userName" placeholder="Dwayne" />
+        </div>
+        <div>
+          <label>Torn ID</label>
+          <input type="text" id="userId" placeholder="345343" />
+        </div>
+      </div>
+      <div class="err" id="addErr"></div>
+      <div class="ok" id="addOk"></div>
+      <div class="toolbar">
+        <button class="btn-primary" onclick="addUser()">Allow access</button>
+        <button class="btn-ghost" onclick="loadUsers()">Refresh</button>
+        <button class="btn-ghost" onclick="logout()">Logout</button>
+        <a href="/" style="margin-left:auto;line-height:32px">Dashboard →</a>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2 style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:8px;text-transform:uppercase">Allowed users</h2>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:8px">When they visit the dashboard they enter <strong>their</strong> Torn API key. We check the key owner matches this list.</p>
+      <table>
+        <thead><tr><th>Name</th><th>ID</th><th>Added</th><th></th></tr></thead>
+        <tbody id="usersBody"><tr><td colspan="4">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script>
+async function api(path, opts = {}) {
+  const res = await fetch(path, { credentials: 'include', ...opts });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error || res.statusText);
+  return json;
+}
+
+async function checkAdmin() {
+  try {
+    const me = await api('/api/me');
+    if (me.isAdmin) {
+      document.getElementById('adminLogin').classList.add('hidden');
+      document.getElementById('adminPanel').classList.remove('hidden');
+      loadUsers();
+      return true;
+    }
+  } catch {}
+  return false;
+}
+
+async function adminLogin() {
+  document.getElementById('adminLoginErr').textContent = '';
+  try {
+    await api('/api/admin/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: document.getElementById('adminPassword').value }),
+    });
+    document.getElementById('adminLogin').classList.add('hidden');
+    document.getElementById('adminPanel').classList.remove('hidden');
+    loadUsers();
+  } catch (e) {
+    document.getElementById('adminLoginErr').textContent = e.message;
+  }
+}
+
+async function loadUsers() {
+  const body = document.getElementById('usersBody');
+  try {
+    const { users } = await api('/api/admin/users');
+    if (!users.length) {
+      body.innerHTML = '<tr><td colspan="4" style="color:var(--muted)">No users yet — add Dwayne above</td></tr>';
+      return;
+    }
+    body.innerHTML = users.map(u => `<tr>
+      <td><strong>${u.name}</strong></td>
+      <td style="font-family:var(--mono)">${u.id}</td>
+      <td style="color:var(--muted);font-size:12px">${(u.addedAt||'').slice(0,10)}</td>
+      <td><button class="btn-ghost" onclick="revokeUser('${u.id}')">Revoke</button></td>
+    </tr>`).join('');
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="4" style="color:var(--accent)">${e.message}</td></tr>`;
+  }
+}
+
+async function addUser() {
+  document.getElementById('addErr').textContent = '';
+  document.getElementById('addOk').textContent = '';
+  const name = document.getElementById('userName').value.trim();
+  const id = document.getElementById('userId').value.trim();
+  try {
+    await api('/api/admin/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, id }),
+    });
+    document.getElementById('addOk').textContent = `Access granted to ${name} (${id})`;
+    document.getElementById('userName').value = '';
+    document.getElementById('userId').value = '';
+    loadUsers();
+  } catch (e) {
+    document.getElementById('addErr').textContent = e.message;
+  }
+}
+
+async function revokeUser(id) {
+  if (!confirm('Revoke access for this user?')) return;
+  try {
+    await api(`/api/admin/users?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    loadUsers();
+  } catch (e) {
+    document.getElementById('addErr').textContent = e.message;
+  }
+}
+
+async function logout() {
+  await api('/api/logout', { method: 'POST' });
+  location.reload();
+}
+
+document.getElementById('adminPassword')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') adminLogin();
+});
+
+checkAdmin();
+</script>
+</body>
+</html>

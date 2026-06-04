@@ -2,7 +2,8 @@ name: Daily Faction Stats
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    # 12:05 UTC — after Torn day rolls at noon
+    - cron: '5 12 * * *'
   workflow_dispatch:
     inputs:
       backfill_from:
@@ -26,6 +27,7 @@ jobs:
         env:
           TORN_API_KEY: ${{ secrets.TORN_API_KEY }}
           BACKFILL_FROM: ${{ github.event.inputs.backfill_from }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: node fetch_stats.js
 
       - name: Commit and push data
@@ -33,5 +35,5 @@ jobs:
           git config user.name "torn-bot"
           git config user.email "bot@torn"
           git add data/
-          git diff --staged --quiet || git commit -m "stats: $(date -u +%Y-%m-%d)"
-          git push --force origin main
+          git diff --staged --quiet || git commit -m "stats: $(date -u +%Y-%m-%d) Torn day"
+          git push origin HEAD:main

@@ -1,4 +1,16 @@
-const fs = require('fs');
+import fs from 'fs';
+import {
+  memberStatsFromAttacks,
+  computeChainTimes,
+  buildDayMeta,
+} from './lib/compute.js';
+import {
+  tornDayBounds,
+  getLastCompletedTornDate,
+  getCurrentTornDate,
+} from './lib/torn-day.js';
+import { rebuildIndex } from './lib/index-store.js';
+import { formatSummaryText } from './lib/stats.js';
 
 const API_KEY = process.env.TORN_API_KEY;
 const BASE = 'https://api.torn.com';
@@ -10,10 +22,23 @@ async function fetchJSON(url) {
 }
 
 function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
+  return new Promise((r) => setTimeout(r, ms));
 }
 
-async function fetchDay(date, fromTs, toTs, allMembers) {
+async function notifyDiscord(day) {
+  const url = process.env.DISCORD_WEBHOOK_URL;
+  if (!url) return;
+  const text = formatSummaryText(day).slice(0, 1900);
+  await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: text }),
+  });
+  console.log('Posted summary to Discord webhook');
+}
+
+async function fetchDay(date, allMembers, factionRespect) {
+  const { fromTs, toTs } = tornDayBounds(date);
   const attacks = await fetchJSON(
     `${BASE}/faction/?selections=attacks&from=${fromTs}&to=${toTs}&key=${API_KEY}`
   );
@@ -23,74 +48,78 @@ async function fetchDay(date, fromTs, toTs, allMembers) {
     return null;
   }
 
-  const members = {};
-  for (const [id, m] of Object.entries(allMembers)) {
-    members[id] = { name: m.name, respect: 0, hits: 0, assists: 0, losses: 0 };
-  }
-
-  const HIT_RESULTS = ['Attacked','Hospitalized','Mugged','Arrested','Escape','Timeout','Special'];
-
-  for (const atk of Object.values(attacks.attacks || {})) {
-    const id = String(atk.attacker_id);
-    if (!members[id]) members[id] = { name: atk.attacker_name, respect: 0, hits: 0, assists: 0, losses: 0 };
-    if (HIT_RESULTS.includes(atk.result)) {
-      members[id].hits++;
-      members[id].respect += atk.respect_gain || 0;
-    } else if (atk.result === 'Assist') {
-      members[id].assists++;
-    } else if (['Lost','Stalemate','Interrupted'].includes(atk.result)) {
-      members[id].losses++;
-    }
-  }
+  const { members, bestHit } = memberStatsFromAttacks(
+    attacks.attacks,
+    allMembers
+  );
+  const chains = computeChainTimes(attacks.attacks);
+  const meta = buildDayMeta(members, bestHit);
 
   return {
     date,
-    members: Object.entries(members).map(([id, m]) => ({ id, ...m }))
+    tornDay: { fromTs, toTs },
+    factionRespect: factionRespect ?? null,
+    members,
+    meta,
+    chains,
   };
 }
 
+async function saveDay(snapshot) {
+  fs.writeFileSync(
+    `data/${snapshot.date}.json`,
+    JSON.stringify(snapshot, null, 2)
+  );
+  console.log(`Saved data/${snapshot.date}.json`);
+}
+
 async function run() {
-  const basic = await fetchJSON(`${BASE}/faction/?selections=basic&key=${API_KEY}`);
-  if (basic.error) { console.error('API error:', basic.error.error); process.exit(1); }
+  const basic = await fetchJSON(
+    `${BASE}/faction/?selections=basic&key=${API_KEY}`
+  );
+  if (basic.error) {
+    console.error('API error:', basic.error.error);
+    process.exit(1);
+  }
 
   const allMembers = basic.members || {};
+  const factionRespect = basic.respect || 0;
   fs.mkdirSync('data', { recursive: true });
 
   if (BACKFILL_FROM) {
-    // Backfill mode — loop from start date to yesterday
-    console.log(`Backfilling from ${BACKFILL_FROM}...`);
+    console.log(`Backfilling from ${BACKFILL_FROM} (Torn days, 12:00 UTC)...`);
     const start = new Date(BACKFILL_FROM);
-    const end = new Date();
-    end.setDate(end.getDate() - 1);
+    const end = new Date(getLastCompletedTornDate());
 
     let current = new Date(start);
     while (current <= end) {
       const dateStr = current.toISOString().slice(0, 10);
-      const fromTs = Math.floor(current.getTime() / 1000);
-      const toTs = fromTs + 86399;
-
-      console.log(`Fetching ${dateStr}...`);
-      const snapshot = await fetchDay(dateStr, fromTs, toTs, allMembers);
-      if (snapshot) {
-        fs.writeFileSync(`data/${dateStr}.json`, JSON.stringify(snapshot, null, 2));
-        console.log(`Saved data/${dateStr}.json`);
-      }
-
-      await sleep(1000); // avoid hitting API rate limit
-      current.setDate(current.getDate() + 1);
+      console.log(`Fetching Torn day ${dateStr}...`);
+      const snapshot = await fetchDay(dateStr, allMembers, factionRespect);
+      if (snapshot) await saveDay(snapshot);
+      await sleep(1000);
+      current.setUTCDate(current.getUTCDate() + 1);
     }
     console.log('Backfill complete!');
   } else {
-    // Normal daily mode — just fetch last 24 hours
-    const today = new Date().toISOString().slice(0, 10);
-    const fromTs = Math.floor(Date.now() / 1000) - 86400;
-    const toTs = Math.floor(Date.now() / 1000);
-    const snapshot = await fetchDay(today, fromTs, toTs, allMembers);
+    const dateStr = getLastCompletedTornDate();
+    console.log(`Fetching completed Torn day: ${dateStr}`);
+    const snapshot = await fetchDay(dateStr, allMembers, factionRespect);
     if (snapshot) {
-      fs.writeFileSync(`data/${today}.json`, JSON.stringify(snapshot, null, 2));
-      console.log(`Saved data/${today}.json`);
+      await saveDay(snapshot);
+      await notifyDiscord(snapshot);
+    }
+
+    const liveDate = getCurrentTornDate();
+    if (liveDate !== dateStr) {
+      console.log(`Also refreshing in-progress Torn day: ${liveDate}`);
+      const live = await fetchDay(liveDate, allMembers, factionRespect);
+      if (live) await saveDay(live);
     }
   }
+
+  rebuildIndex();
+  console.log('Rebuilt data/index.json');
 }
 
 run();
