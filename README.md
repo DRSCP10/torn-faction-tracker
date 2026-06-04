@@ -31,7 +31,10 @@ Faction dashboard and Discord bot for Torn factions. Tracks respect, chain perfo
 ```bash
 cp .env.example .env
 npm install
+npm run bot:install   # only if running the Discord bot locally
 ```
+
+The root project has **no npm dependencies** on Vercel (API routes use Node built-ins only). The Discord bot installs from `bot/package.json`.
 
 | Variable | Purpose |
 |----------|---------|
@@ -50,7 +53,7 @@ npm run dev              # vercel dev
 npm run fetch            # fetch last completed Torn day
 npm run rebuild-index    # rebuild data/index.json from data/*.json
 npm test
-npm run bot              # Discord bot (long-running host)
+npm run bot:install && npm run bot   # Discord bot (long-running host)
 ```
 
 ### Backfill (Torn day windows)

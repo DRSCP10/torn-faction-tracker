@@ -6,18 +6,13 @@
   "scripts": {
     "fetch": "node fetch_stats.js",
     "bot": "node bot/index.js",
+    "bot:install": "npm install --prefix bot",
     "rebuild-index": "node scripts/rebuild-index.js",
     "test": "node --test tests/*.js",
-    "dev": "vercel dev",
-    "deploy": "vercel --prod"
+    "dev": "npx vercel dev",
+    "deploy": "npx vercel --prod"
   },
   "engines": {
     "node": ">=20"
-  },
-  "dependencies": {
-    "discord.js": "^14.19.3"
-  },
-  "devDependencies": {
-    "vercel": "^41.6.0"
   }
 }
