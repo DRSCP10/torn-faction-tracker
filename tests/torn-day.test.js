@@ -2,9 +2,12 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   tornDayBounds,
+  calendarDayBounds,
   getCurrentTornDate,
+  getCurrentCalendarDate,
   getLastCompletedTornDate,
   getTornDayWindowLabel,
+  getCalendarDayWindowLabel,
   formatTctTime,
   TCT_LABEL,
   TCT_TIMEZONE,
@@ -46,5 +49,30 @@ describe('TCT torn day', () => {
   it('formats clock in TCT', () => {
     const s = formatTctTime(new Date('2026-06-04T15:04:05Z'));
     assert.match(s, /15:04:05 TCT/);
+  });
+});
+
+describe('TCT calendar day', () => {
+  it('uses midnight TCT (UTC) boundaries', () => {
+    const { fromTs, toTs, fromTct, toTct } = calendarDayBounds('2026-06-04');
+    assert.equal(fromTs, Math.floor(new Date('2026-06-04T00:00:00Z').getTime() / 1000));
+    assert.equal(toTs, Math.floor(new Date('2026-06-04T23:59:59.999Z').getTime() / 1000));
+    assert.match(fromTct, /00:00:00 TCT/);
+    assert.match(toTct, /2026-06-04 23:59:59 TCT/);
+  });
+
+  it('labels calendar window', () => {
+    assert.equal(getCalendarDayWindowLabel(), '00:00–23:59 TCT');
+  });
+
+  it('current calendar date follows UTC date', () => {
+    assert.equal(
+      getCurrentCalendarDate(new Date('2026-06-04T11:30:00Z')),
+      '2026-06-04'
+    );
+    assert.equal(
+      getCurrentCalendarDate(new Date('2026-06-04T23:30:00Z')),
+      '2026-06-04'
+    );
   });
 });

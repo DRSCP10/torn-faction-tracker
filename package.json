@@ -9,6 +9,7 @@
     "bot:install": "npm install --prefix bot",
     "rebuild-index": "node scripts/rebuild-index.js",
     "db:init": "node scripts/init-postgres.js",
+    "verify:hits": "node scripts/verify-hits.js",
     "test": "node --test tests/*.js",
     "dev": "npx vercel dev",
     "deploy": "npx vercel --prod"

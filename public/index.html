@@ -275,7 +275,7 @@
   <!-- Top metrics -->
   <div class="metrics">
     <div class="metric purple"><div class="label">Faction Respect</div><div class="val" id="m-faction-respect">—</div><div class="sub" id="m-faction-rank">All time total</div></div>
-    <div class="metric red"><div class="label">Respect (Torn day)</div><div class="val" id="m-respect">—</div><div class="sub" id="m-torn-day">12:00–11:59 TCT</div></div>
+    <div class="metric red"><div class="label">Respect Today</div><div class="val" id="m-respect">—</div><div class="sub" id="m-torn-day">00:00–23:59 TCT</div></div>
     <div class="metric blue"><div class="label">Hits Today</div><div class="val" id="m-hits">—</div></div>
     <div class="metric green"><div class="label">Assists Today</div><div class="val" id="m-assists">—</div></div>
     <div class="metric orange"><div class="label">Losses Today</div><div class="val" id="m-losses">—</div></div>
@@ -716,13 +716,15 @@ function copyChainPing() {
 async function fetchLiveData() {
   try {
     const data = await api('/api/live');
-    document.getElementById('factionName').textContent = `${data.name} · Torn day ${data.tornDate || ''} (${data.tornDayWindow || TornTime.getTornDayWindowLabel()})`;
+    const dayLabel = data.calendarDate || data.tornDate || '';
+    const dayWindow = data.dayWindow || data.tornDayWindow || TornTime.getCalendarDayWindowLabel();
+    document.getElementById('factionName').textContent = `${data.name} · ${dayLabel} (${dayWindow})`;
     document.title = `${data.name} · Dashboard`;
     document.getElementById('m-faction-respect').textContent = (data.respect||0).toLocaleString();
     document.getElementById('m-faction-rank').textContent = `Rank: ${data.rank?.name||'—'}`;
-    document.getElementById('m-torn-day').textContent = data.tornDate
-      ? `${data.tornDate} · ${data.tornDayWindow || TornTime.getTornDayWindowLabel()}`
-      : TornTime.getTornDayWindowLabel();
+    document.getElementById('m-torn-day').textContent = dayLabel
+      ? `${dayLabel} · ${dayWindow}`
+      : dayWindow;
 
     liveMembers = data.members || [];
     const online = data.online || [];
@@ -751,11 +753,8 @@ async function fetchLiveData() {
         ).join('')}</ol>`
       : '<span class="empty">No hits yet today</span>';
 
-    if (data.warnings?.length) {
-      setStatus('ok', `Connected · ${data.name} — ${data.warnings[0]}`);
-    } else {
-      setStatus('ok', `Connected · ${data.name}`);
-    }
+    const warn = data.warnings?.length ? ` — ${data.warnings[0]}` : '';
+    setStatus('ok', `Connected · ${data.name}${warn}`);
     document.getElementById('lastUpdated').textContent = `Updated ${TornTime.formatTctDateTime(new Date())}`;
   } catch(e) {
     if (e.message === 'unauthorized') {

@@ -150,7 +150,7 @@ client.on('interactionCreate', async (interaction) => {
           const chainReady = formatOnlineList(live.members);
           data = {
             name: live.name,
-            tornDate: live.tornDate,
+            tornDate: live.calendarDate || live.tornDate,
             chainReady,
             messageTemplate: `Chain up! ${chainReady
               .filter((m) => m.status === 'Online')
@@ -165,7 +165,7 @@ client.on('interactionCreate', async (interaction) => {
           return;
         }
         const lines = [
-          `**${data.name}** · Torn day ${data.tornDate}`,
+          `**${data.name}** · ${data.tornDate} (TCT calendar day)`,
           '',
           `**Online (${data.online?.length ?? 0}):** ${(data.online || []).map((m) => m.name).join(', ') || '—'}`,
           `**Idle (${data.idle?.length ?? 0}):** ${(data.idle || []).map((m) => m.name).join(', ') || '—'}`,

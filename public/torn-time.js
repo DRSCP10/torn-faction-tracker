@@ -33,6 +33,7 @@
     TCT_LABEL,
     TCT_TIMEZONE,
     getTornDayWindowLabel: () => `12:00–11:59 ${TCT_LABEL}`,
+    getCalendarDayWindowLabel: () => `00:00–23:59 ${TCT_LABEL}`,
     formatTctDateTime,
     formatTctTime,
   };
