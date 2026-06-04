@@ -696,7 +696,11 @@ async function fetchLiveData() {
       ? `<span class="respect-val">${bh.respect.toFixed(2)}r</span> on <strong>${bh.target}</strong> — ${bh.member}`
       : '<span class="empty">No hits yet today</span>';
 
-    setStatus('ok', `Connected · ${data.name}`);
+    if (data.warnings?.length) {
+      setStatus('ok', `Connected · ${data.name} — ${data.warnings[0]}`);
+    } else {
+      setStatus('ok', `Connected · ${data.name}`);
+    }
     document.getElementById('lastUpdated').textContent = `Updated ${new Date().toLocaleTimeString()}`;
   } catch(e) {
     if (e.message === 'unauthorized') {
