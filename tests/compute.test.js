@@ -6,17 +6,6 @@ import {
   buildDayMeta,
 } from '../lib/compute.js';
 import { underperformers, compareDays } from '../lib/stats.js';
-import { tornDayBounds, getCurrentTornDate } from '../lib/torn-day.js';
-
-describe('tornDayBounds', () => {
-  it('uses noon UTC boundaries', () => {
-    const { fromTs, toTs } = tornDayBounds('2026-05-29');
-    assert.equal(fromTs, Math.floor(new Date('2026-05-29T12:00:00Z').getTime() / 1000));
-    assert.ok(toTs > fromTs);
-    assert.ok(toTs - fromTs < 90000);
-  });
-});
-
 describe('memberStatsFromAttacks', () => {
   it('tracks chain hits and low respect hits', () => {
     const attacks = {

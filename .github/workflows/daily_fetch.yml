@@ -2,7 +2,7 @@ name: Daily Faction Stats
 
 on:
   schedule:
-    # 12:05 UTC — after Torn day rolls at noon
+    # 12:05 UTC (= 12:05 TCT) — after Torn day rolls at noon TCT
     - cron: '5 12 * * *'
   workflow_dispatch:
     inputs:

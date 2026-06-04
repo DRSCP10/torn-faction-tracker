@@ -135,7 +135,7 @@ client.on('interactionCreate', async (interaction) => {
       await showDatePicker(
         interaction,
         'respect-date',
-        '📅 **Respect bot** — choose a Torn day (12:00–11:59 UTC):'
+        '📅 **Respect bot** — choose a Torn day (12:00–11:59 TCT):'
       );
       return;
     }

@@ -94,7 +94,7 @@ async function run() {
   fs.mkdirSync('data', { recursive: true });
 
   if (BACKFILL_FROM) {
-    console.log(`Backfilling from ${BACKFILL_FROM} (Torn days, 12:00 UTC)...`);
+    console.log(`Backfilling from ${BACKFILL_FROM} (Torn days, 12:00 TCT)...`);
     const start = new Date(BACKFILL_FROM);
     const end = new Date(getLastCompletedTornDate());
 

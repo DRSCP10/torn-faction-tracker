@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/theme.css">
 <script src="/theme.js"></script>
+<script src="/torn-time.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
   :root {
@@ -245,6 +246,7 @@
   </div>
   <div class="header-right">
     <div class="live-badge"><div class="live-dot"></div> LIVE</div>
+    <span class="countdown" id="tctClock" title="Torn City Time">— TCT</span>
     <span class="countdown" id="countdown">Next refresh in 5:00</span>
     <a href="/admin.html" class="header-link" id="headerAdminLink">Admin</a>
     <button type="button" class="btn-refresh" id="themeToggle" onclick="FactionTheme.toggleTheme(); onThemeChange();" title="Toggle theme" aria-label="Toggle theme">☀</button>
@@ -273,7 +275,7 @@
   <!-- Top metrics -->
   <div class="metrics">
     <div class="metric purple"><div class="label">Faction Respect</div><div class="val" id="m-faction-respect">—</div><div class="sub" id="m-faction-rank">All time total</div></div>
-    <div class="metric red"><div class="label">Respect (Torn day)</div><div class="val" id="m-respect">—</div><div class="sub" id="m-torn-day">12:00 UTC window</div></div>
+    <div class="metric red"><div class="label">Respect (Torn day)</div><div class="val" id="m-respect">—</div><div class="sub" id="m-torn-day">12:00–11:59 TCT</div></div>
     <div class="metric blue"><div class="label">Hits Today</div><div class="val" id="m-hits">—</div></div>
     <div class="metric green"><div class="label">Assists Today</div><div class="val" id="m-assists">—</div></div>
     <div class="metric orange"><div class="label">Losses Today</div><div class="val" id="m-losses">—</div></div>
@@ -603,7 +605,16 @@ document.getElementById('loginApiKey')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') doLogin();
 });
 
+function tickTctClock() {
+  const el = document.getElementById('tctClock');
+  if (el && window.TornTime) {
+    el.textContent = TornTime.formatTctTime(new Date());
+  }
+}
+
 FactionTheme.initTheme();
+tickTctClock();
+setInterval(tickTctClock, 1000);
 
 (async () => {
   try {
@@ -705,11 +716,13 @@ function copyChainPing() {
 async function fetchLiveData() {
   try {
     const data = await api('/api/live');
-    document.getElementById('factionName').textContent = `${data.name} · Torn day ${data.tornDate || ''}`;
+    document.getElementById('factionName').textContent = `${data.name} · Torn day ${data.tornDate || ''} (${data.tornDayWindow || TornTime.getTornDayWindowLabel()})`;
     document.title = `${data.name} · Dashboard`;
     document.getElementById('m-faction-respect').textContent = (data.respect||0).toLocaleString();
     document.getElementById('m-faction-rank').textContent = `Rank: ${data.rank?.name||'—'}`;
-    document.getElementById('m-torn-day').textContent = data.tornDate ? `Torn day ${data.tornDate}` : '12:00 UTC';
+    document.getElementById('m-torn-day').textContent = data.tornDate
+      ? `${data.tornDate} · ${data.tornDayWindow || TornTime.getTornDayWindowLabel()}`
+      : TornTime.getTornDayWindowLabel();
 
     liveMembers = data.members || [];
     const online = data.online || [];
@@ -743,7 +756,7 @@ async function fetchLiveData() {
     } else {
       setStatus('ok', `Connected · ${data.name}`);
     }
-    document.getElementById('lastUpdated').textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    document.getElementById('lastUpdated').textContent = `Updated ${TornTime.formatTctDateTime(new Date())}`;
   } catch(e) {
     if (e.message === 'unauthorized') {
       document.getElementById('loginOverlay').classList.remove('hidden');

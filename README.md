@@ -10,7 +10,7 @@ Faction dashboard and Discord bot for Torn factions. Tracks respect, chain perfo
 - Faction stats use server `TORN_API_KEY` only — member keys are never stored
 
 ### Dashboard
-- **Torn day** stats (12:00–11:59 UTC) — aligned with Torn time
+- **Torn day** stats (12:00–11:59 **TCT**) — Torn City Time (fixed UTC/GMT, no DST)
 - **Live:** online/idle for chains, copy ping text, profile + message links
 - **Perk bar:** available respect → next upgrade (from Torn `upgrades` API), or rank fallback
 - **History / Analytics / Compare / All-time**
@@ -22,7 +22,7 @@ Faction dashboard and Discord bot for Torn factions. Tracks respect, chain perfo
 - `/online` — who is online for chains
 
 ### Data pipeline
-- Daily GitHub Action at **12:05 UTC** (after Torn day ends)
+- Daily GitHub Action at **12:05 TCT** (12:05 UTC — after Torn day ends)
 - Writes `data/YYYY-MM-DD.json` + rebuilds `data/index.json` (fast charts)
 - Optional **Discord webhook** auto-post after fetch
 
@@ -101,7 +101,7 @@ npm run db:init   # requires POSTGRES_URL in env
 
 ## GitHub Action
 
-Secret `TORN_API_KEY`. Optional `DISCORD_WEBHOOK_URL`. Runs at 12:05 UTC, normal `git push` (no force).
+Secret `TORN_API_KEY`. Optional `DISCORD_WEBHOOK_URL`. Runs at 12:05 TCT (UTC), normal `git push` (no force).
 
 ## API routes
 
