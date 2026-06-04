@@ -116,6 +116,7 @@ Secret `TORN_API_KEY`. Optional `DISCORD_WEBHOOK_URL`. Runs at 12:05 TCT (UTC), 
 | `POST /api/admin/test-bot` | Test bot → API auth |
 | `POST /api/logout` | Clear session |
 | `GET /api/live` | Live stats for **today’s calendar date** (00:00–23:59 TCT), with paginated attack fetches |
+| `GET /api/hits-today` | Full attack log for today (table report; also at `/hits-today`) |
 | `GET /api/online` | Online list + ping text |
 | `GET /api/history?limit=14` | Chart summaries (from index) |
 | `GET /api/day?date=` | Full day + analytics |

@@ -87,6 +87,13 @@
   .metric .label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
   .metric .val { font-family: var(--mono); font-size: 26px; color: var(--text); }
   .metric .sub { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .metric-hit-link {
+    display: block; text-decoration: none; color: inherit; cursor: pointer;
+  }
+  .metric-hit-link:hover .val { color: var(--blue); text-decoration: underline; }
+  .metric-hit-link .label::after {
+    content: ' ↗'; font-size: 9px; color: var(--muted); opacity: 0.7;
+  }
 
   /* Tabs */
   .tabs {
@@ -276,7 +283,12 @@
   <div class="metrics">
     <div class="metric purple"><div class="label">Faction Respect</div><div class="val" id="m-faction-respect">—</div><div class="sub" id="m-faction-rank">All time total</div></div>
     <div class="metric red"><div class="label">Respect Today</div><div class="val" id="m-respect">—</div><div class="sub" id="m-torn-day">00:00–23:59 TCT</div></div>
-    <div class="metric blue"><div class="label">Hits Today</div><div class="val" id="m-hits">—</div></div>
+    <div class="metric blue">
+      <a class="metric-hit-link" href="/hits-today" target="_blank" rel="noopener noreferrer" title="Open today&apos;s hits report">
+        <div class="label">Hits Today</div>
+        <div class="val" id="m-hits">—</div>
+      </a>
+    </div>
     <div class="metric green"><div class="label">Assists Today</div><div class="val" id="m-assists">—</div></div>
     <div class="metric orange"><div class="label">Losses Today</div><div class="val" id="m-losses">—</div><div class="sub" id="m-stealth-on-us"></div></div>
     <div class="metric yellow"><div class="label">Members Online</div><div class="val" id="m-online">—</div><div class="sub" id="m-total-members"></div></div>

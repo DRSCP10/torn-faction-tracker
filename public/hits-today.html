@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hits Today · Faction Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/theme.css">
+<script src="/theme.js"></script>
+<script src="/torn-time.js"></script>
+<style>
+  :root { --mono: 'Share Tech Mono', monospace; --sans: 'Barlow', sans-serif; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+  header {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    padding: 1rem 2rem; border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  .logo h1 { font-family: var(--mono); font-size: 15px; letter-spacing: 0.15em; text-transform: uppercase; }
+  .logo span { font-size: 11px; color: var(--muted); font-family: var(--mono); display: block; margin-top: 4px; }
+  .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .btn {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+    padding: 6px 14px; cursor: pointer; border-radius: 3px; text-transform: uppercase;
+    text-decoration: none; transition: all 0.2s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  main { padding: 1.5rem 2rem; max-width: 1400px; margin: 0 auto; }
+  .summary {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 1.25rem;
+  }
+  .chip {
+    font-family: var(--mono); font-size: 11px; padding: 6px 12px; border-radius: 3px;
+    border: 1px solid var(--border); background: var(--surface);
+  }
+  .chip strong { color: var(--text); }
+  .chip.muted { color: var(--muted); }
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1rem; align-items: center;
+  }
+  .filters label { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.08em; }
+  .filters select {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--mono); font-size: 12px; padding: 6px 10px; border-radius: 3px;
+  }
+  .panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 4px; overflow: hidden;
+  }
+  .hits-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .hits-table th {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border);
+    background: var(--surface2); position: sticky; top: 0; z-index: 1;
+  }
+  .hits-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .hits-table tr:hover td { background: var(--surface2); }
+  .hits-table .num { text-align: right; font-family: var(--mono); }
+  .time { font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .result {
+    font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+    padding: 2px 8px; border-radius: 3px; display: inline-block;
+  }
+  .result-hit { color: var(--green); border: 1px solid rgba(34,197,94,0.35); }
+  .result-loss { color: var(--accent); border: 1px solid rgba(239,68,68,0.35); }
+  .result-neutral { color: var(--yellow); border: 1px solid rgba(234,179,8,0.35); }
+  .result-other { color: var(--muted); border: 1px solid var(--border); }
+  .dir-us { color: var(--green); font-family: var(--mono); font-size: 11px; }
+  .dir-them { color: var(--accent); font-family: var(--mono); font-size: 11px; }
+  .dir-other { color: var(--muted); font-family: var(--mono); font-size: 11px; }
+  .stealth-tag { color: var(--purple); font-size: 10px; font-family: var(--mono); margin-left: 6px; }
+  .table-wrap { overflow: auto; max-height: calc(100vh - 220px); }
+  .empty, .err { padding: 2rem; text-align: center; font-family: var(--mono); color: var(--muted); }
+  .err { color: var(--accent); }
+  .login-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .login-overlay.hidden { display: none; }
+  .login-box {
+    background: var(--surface); border: 1px solid var(--border); padding: 2rem; border-radius: 4px;
+    max-width: 360px; width: 90%;
+  }
+  .login-box h2 { font-family: var(--mono); font-size: 14px; margin-bottom: 1rem; }
+  .login-box input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--mono); padding: 8px 10px; margin-bottom: 12px; border-radius: 3px;
+  }
+  .login-box button {
+    width: 100%; background: var(--accent); border: none; color: #fff;
+    font-family: var(--mono); padding: 8px; cursor: pointer; border-radius: 3px;
+  }
+  .login-err { color: var(--accent); font-family: var(--mono); font-size: 11px; min-height: 1.2em; }
+</style>
+</head>
+<body>
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h2>Login required</h2>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Use your Torn API key to view today&apos;s hits report.</p>
+    <input type="password" id="loginApiKey" placeholder="API key" autocomplete="off">
+    <div class="login-err" id="loginErr"></div>
+    <button type="button" onclick="doLogin()">Connect</button>
+  </div>
+</div>
+
+<header>
+  <div class="logo">
+    <h1 id="reportTitle">Hits Today</h1>
+    <span id="reportSub">—</span>
+  </div>
+  <div class="header-actions">
+    <span class="chip muted" id="updatedAt">—</span>
+    <button class="btn" type="button" onclick="loadReport()">Refresh</button>
+    <a class="btn" href="/">Dashboard</a>
+  </div>
+</header>
+
+<main>
+  <div class="summary" id="summaryChips"></div>
+  <div class="filters">
+    <label for="filterResult">Result</label>
+    <select id="filterResult"><option value="">All results</option></select>
+    <label for="filterDirection">Direction</label>
+    <select id="filterDirection">
+      <option value="">All</option>
+      <option value="our">Our attacks</option>
+      <option value="us">Attacked us</option>
+    </select>
+  </div>
+  <div class="panel">
+    <div class="table-wrap">
+      <table class="hits-table">
+        <thead>
+          <tr>
+            <th>Time (TCT)</th>
+            <th>Direction</th>
+            <th>Attacker</th>
+            <th>Defender</th>
+            <th>Result</th>
+            <th class="num">Respect +</th>
+            <th class="num">Chain</th>
+          </tr>
+        </thead>
+        <tbody id="hitsBody">
+          <tr><td colspan="7" class="empty">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+let reportRows = [];
+
+const LOSS_RESULTS = new Set(['Lost', 'Stalemate', 'Interrupted']);
+const HIT_RESULTS = new Set(['Attacked', 'Hospitalized', 'Mugged', 'Arrested', 'Escape', 'Timeout', 'Special']);
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function resultClass(result) {
+  if (HIT_RESULTS.has(result)) return 'result-hit';
+  if (LOSS_RESULTS.has(result)) return 'result-loss';
+  if (result === 'Assist') return 'result-neutral';
+  return 'result-other';
+}
+
+function directionClass(direction) {
+  if (direction.startsWith('Attacked us')) return 'dir-them';
+  if (direction === 'Our attack') return 'dir-us';
+  return 'dir-other';
+}
+
+function matchesDirection(row, filter) {
+  if (!filter) return true;
+  if (filter === 'our') return row.direction === 'Our attack';
+  if (filter === 'us') return row.direction.startsWith('Attacked us');
+  return true;
+}
+
+function renderTable() {
+  const resultFilter = document.getElementById('filterResult').value;
+  const dirFilter = document.getElementById('filterDirection').value;
+  const filtered = reportRows.filter((r) => {
+    if (resultFilter && r.result !== resultFilter) return false;
+    return matchesDirection(r, dirFilter);
+  });
+  const body = document.getElementById('hitsBody');
+  if (!filtered.length) {
+    body.innerHTML = '<tr><td colspan="7" class="empty">No matching attacks</td></tr>';
+    return;
+  }
+  body.innerHTML = filtered.map((r) => {
+    const stealth = r.stealthed ? '<span class="stealth-tag">stealth</span>' : '';
+    return `<tr>
+      <td class="time">${escapeHtml(r.timeTct)}</td>
+      <td><span class="${directionClass(r.direction)}">${escapeHtml(r.direction)}</span></td>
+      <td>${escapeHtml(r.attacker)}${stealth}</td>
+      <td>${escapeHtml(r.defender)}</td>
+      <td><span class="result ${resultClass(r.result)}">${escapeHtml(r.result)}</span></td>
+      <td class="num respect-val">${r.respectGain > 0 ? '+' + r.respectGain.toFixed(2) : '—'}</td>
+      <td class="num">${r.chain > 0 ? r.chain : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderSummary(data) {
+  const s = data.summary || {};
+  const chips = [
+    ['Offensive hits', data.totals?.hits ?? s.offensiveHits ?? 0],
+    ['All log rows', s.total ?? 0],
+    ['Attacked us', s.attackedUs ?? 0],
+    ['Stealthed', s.stealthed ?? 0],
+  ];
+  document.getElementById('summaryChips').innerHTML = chips.map(([label, val]) =>
+    `<span class="chip"><span class="muted">${escapeHtml(label)}:</span> <strong>${val}</strong></span>`
+  ).join('');
+
+  const byResult = s.byResult || {};
+  const sel = document.getElementById('filterResult');
+  const current = sel.value;
+  const results = Object.keys(byResult).sort();
+  sel.innerHTML = '<option value="">All results</option>' +
+    results.map((r) => `<option value="${escapeHtml(r)}">${escapeHtml(r)} (${byResult[r]})</option>`).join('');
+  if (results.includes(current)) sel.value = current;
+}
+
+async function loadReport() {
+  const body = document.getElementById('hitsBody');
+  body.innerHTML = '<tr><td colspan="7" class="empty">Loading…</td></tr>';
+  try {
+    const res = await fetch('/api/hits-today', { credentials: 'include' });
+    if (res.status === 401) {
+      document.getElementById('loginOverlay').classList.remove('hidden');
+      body.innerHTML = '<tr><td colspan="7" class="empty">Login required</td></tr>';
+      return;
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || res.statusText);
+    }
+    const data = await res.json();
+    reportRows = data.rows || [];
+    document.getElementById('reportTitle').textContent = `${data.factionName || 'Faction'} · Hits Today`;
+    document.getElementById('reportSub').textContent =
+      `${data.calendarDate || ''} · ${data.dayWindow || ''} · ${data.dayBounds?.from || ''} → ${data.dayBounds?.to || ''}`;
+    document.getElementById('updatedAt').textContent =
+      `Updated ${TornTime.formatTctDateTime(new Date())}`;
+    renderSummary(data);
+    renderTable();
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="7" class="err">${escapeHtml(e.message || 'Failed to load')}</td></tr>`;
+  }
+}
+
+async function checkAuth() {
+  const res = await fetch('/api/me', { credentials: 'include' });
+  const me = await res.json();
+  if (me.authenticated) {
+    document.getElementById('loginOverlay').classList.add('hidden');
+    return true;
+  }
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  return false;
+}
+
+async function doLogin() {
+  const apiKey = document.getElementById('loginApiKey').value.trim();
+  document.getElementById('loginErr').textContent = '';
+  if (!apiKey) {
+    document.getElementById('loginErr').textContent = 'Enter your API key';
+    return;
+  }
+  try {
+    const res = await fetch('/api/auth', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      document.getElementById('loginErr').textContent = data.error || 'Login failed';
+      return;
+    }
+    document.getElementById('loginOverlay').classList.add('hidden');
+    await loadReport();
+  } catch {
+    document.getElementById('loginErr').textContent = 'Login failed';
+  }
+}
+
+document.getElementById('filterResult').addEventListener('change', renderTable);
+document.getElementById('filterDirection').addEventListener('change', renderTable);
+document.getElementById('loginApiKey')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') doLogin();
+});
+
+(async () => {
+  if (await checkAuth()) await loadReport();
+})();
+</script>
+</body>
+</html>

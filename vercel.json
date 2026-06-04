@@ -2,6 +2,7 @@
   "installCommand": "npm install",
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/hits-today", "destination": "/hits-today.html" },
     { "source": "/", "destination": "/index.html" }
   ],
   "headers": [
